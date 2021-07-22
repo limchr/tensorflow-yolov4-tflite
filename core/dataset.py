@@ -180,6 +180,7 @@ class Dataset(object):
                 np.random.shuffle(self.annotations)
                 raise StopIteration
 
+
     def random_horizontal_flip(self, image, bboxes):
         if random.random() < 0.5:
             _, w, _ = image.shape

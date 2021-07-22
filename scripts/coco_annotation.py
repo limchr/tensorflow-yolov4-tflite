@@ -6,11 +6,13 @@ from os.path import isfile, join
 from absl.flags import FLAGS
 import cv2
 
-flags.DEFINE_string('coco_data', './val2017.pkl', 'path to coco data')
+flags.DEFINE_string('coco_data', './coco_train2017.pkl', 'path to coco data')
 flags.DEFINE_string('classes', '../data/classes/coco.names', 'path to classes file')
-flags.DEFINE_string('coco_path', "/Volumes/Elements/data/coco_dataset/coco", 'resize images to')
-flags.DEFINE_string('image_path', "images/val2017", 'path to image val')
-flags.DEFINE_string('anno_path_val', '../data/dataset/val2017.txt', 'path to classes file')
+flags.DEFINE_string('coco_path', "/home/chris/datasets/coco/train2017_resized", 'resize images to')
+flags.DEFINE_string('image_path', "/home/chris/datasets/coco/train2017", 'path to image val')
+flags.DEFINE_string('anno_path_val', '../data/dataset/coco_train2017.txt', 'path to classes file')
+
+
 
 def convert_annotation(output, data, data_type = "val"):
     class_names = [c.strip() for c in open(FLAGS.classes).readlines()]
