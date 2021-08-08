@@ -191,10 +191,10 @@ def get_filtered_images(cls, grid_x, grid_y, break_at, scale):
 
 def main(_argv):
 
-    scale = 0 # 0 small, 1 mid, 2 large
+    scale = 2 # 0 small, 1 mid, 2 large
 
-    grid_x = 26
-    grid_y = 26
+    grid_x = 6
+    grid_y = 6
 
     break_at = 50
     cls = 'person'

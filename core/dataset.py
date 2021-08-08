@@ -321,19 +321,22 @@ class Dataset(object):
                     bbox_coor[2:] - bbox_coor[:2],
                 ],
                 axis=-1,
-            )
+            ) # represents center of object (xy) and wh of object
+
             bbox_xywh_scaled = (
                 1.0 * bbox_xywh[np.newaxis, :] / self.strides[:, np.newaxis]
-            )
+            ) # calculates bboxes in grid size metrics with strides
 
             iou = []
             exist_positive = False
             for i in range(3):
                 anchors_xywh = np.zeros((self.anchor_per_scale, 4))
+
+                # floor xy of ground truth grid cell and add 0.5 for centering it
                 anchors_xywh[:, 0:2] = (
-                    np.floor(bbox_xywh_scaled[i, 0:2]).astype(np.int32) + 0.5
+                    np.floor(bbox_xywh_scaled[i, 0:2]).astype(np.int32) + 0.5 # 0.5 to move at "border" of grid cell?
                 )
-                anchors_xywh[:, 2:4] = self.anchors[i]
+                anchors_xywh[:, 2:4] = self.anchors[i] / self.strides[i] # CHANGED
 
                 iou_scale = utils.bbox_iou(
                     bbox_xywh_scaled[i][np.newaxis, :], anchors_xywh
