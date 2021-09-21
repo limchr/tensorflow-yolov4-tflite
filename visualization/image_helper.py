@@ -13,6 +13,17 @@ def preprocess_img(path):
 
 
 
+def read_img_yolo(image_path):
+    image = cv2.imread(image_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image, bboxes = utils.image_preprocess(
+        np.copy(image),
+        [self.train_input_size, self.train_input_size],
+        None
+    )
+    return image
+
+
 def convert_to_float_images(imgs):
     min = imgs.min()
     max = imgs.max()
