@@ -1,7 +1,21 @@
+from absl import flags
+from absl.flags import FLAGS
+import os
+import tensorflow as tf
+from core.yolov4 import YOLO, decode_train
+from core.config import cfg
+from core import utils
+from core.dataset import Dataset
+
 flags.DEFINE_string('model', 'yolov4', 'yolov4, yolov3')
 flags.DEFINE_string('weights', os.path.join(cfg.YOLO.ROOT_DIR,'./data/yolov4.weights'), 'pretrained weights')
 # flags.DEFINE_string('weights', None, 'pretrained weights')
 flags.DEFINE_boolean('tiny', False, 'yolo or yolo-tiny')
+
+
+def get_class_names():
+    trainset = Dataset(FLAGS, is_training=False)
+    return trainset.classes
 
 
 def get_model():

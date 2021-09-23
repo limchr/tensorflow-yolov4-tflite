@@ -8,3 +8,6 @@ imgs = ['/home/chris/src/python/tensorflow-yolov4-tflite/visualization/imgs/came
 '/home/chris/src/python/tensorflow-yolov4-tflite/visualization/imgs/pets-3715733_1280.jpg',
 '/home/chris/src/python/tensorflow-yolov4-tflite/visualization/imgs/pizza-2776188_1280.jpg',
 '/home/chris/src/python/tensorflow-yolov4-tflite/visualization/imgs/uber-eats-4709288_1920.jpg',]
+
+
+out_path_bboxes = '/home/chris/src/python/tensorflow-yolov4-tflite/visualization/out_bb'

@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import cv2
-
+from core import utils
 
 def preprocess_img(path):
     img = np.asarray(Image.open(path))/255
@@ -16,9 +16,9 @@ def preprocess_img(path):
 def read_img_yolo(image_path):
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image, bboxes = utils.image_preprocess(
+    image = utils.image_preprocess(
         np.copy(image),
-        [self.train_input_size, self.train_input_size],
+        [416,416],
         None
     )
     return image
@@ -146,17 +146,24 @@ def draw_bbox(image, bboxes, colors=None, labels=None, border_width=None, font_s
     if border_width is None:
         border_width = ceil((image_h + image_w) / 500)
 
-
+    # coords is list of x y w h
     for coords, col, label in zip(bboxes, colors, labels):
+        # c1 is upper left corner, c2 is bottom right corner
         c1, c2 = [coords[0], coords[1]], [coords[0] + coords[2], coords[1] + coords[3]]
         cv2.rectangle(image, tuple(c1), tuple(c2), col, border_width)
 
         if not label is None:
             t_size = cv2.getTextSize(label, 0, font_scale, thickness=border_width // 2)[0]
-            c3 = [c1[0] + t_size[0], c1[1] - t_size[1] - 3]
-            if c3[1] < 0:
-                c3[1] = c3[1] + t_size[1]
-                c1[1] = c1[1] + t_size[1]
+            # c3 is right x and
+            c3 = [c1[0] + t_size[0], c1[1] - t_size[1] - 4]
+            if c3[1] < 0: # if text is outside image (top side)
+                amount = -c3[1]
+                c3[1] += amount
+                c1[1] += amount
+            if c3[0] > image.shape[1]:
+                amount = c3[0] - image.shape[1]
+                c3[0] -= amount
+                c1[0] -= amount
             cv2.rectangle(image, tuple(c1), tuple(c3), col, -1)
             cv2.putText(image, label, (c1[0], c1[1] - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0),
                         border_width // 2, lineType=cv2.LINE_AA)
