@@ -11,3 +11,4 @@ imgs = ['/home/chris/src/python/tensorflow-yolov4-tflite/visualization/imgs/came
 
 
 out_path_bboxes = '/home/chris/src/python/tensorflow-yolov4-tflite/visualization/out_bb'
+out_path_shift = '/home/chris/src/python/tensorflow-yolov4-tflite/visualization/out_shift'

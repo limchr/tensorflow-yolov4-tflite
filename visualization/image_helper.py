@@ -13,15 +13,18 @@ def preprocess_img(path):
 
 
 
-def read_img_yolo(image_path):
+def read_img_yolo(image_path, target_size=[416,416]):
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = utils.image_preprocess(
         np.copy(image),
-        [416,416],
+        target_size,
         None
     )
     return image
+
+
+
 
 
 def convert_to_float_images(imgs):
