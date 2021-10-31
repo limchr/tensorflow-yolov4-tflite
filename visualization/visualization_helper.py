@@ -41,10 +41,10 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name, head_i, grid_x,
         conv_layer, preds = grad_model(img_array)
 
         if anchor_i == None:
-            anchor_i = int(tf.argmax(preds[head_i][0,grid_x,grid_y,:,4]))
+            anchor_i = int(tf.argmax(preds[head_i][0,grid_y,grid_x,:,4]))
 
 
-        class_channel = preds[head_i][0, grid_x, grid_y, anchor_i, bb_i]
+        class_channel = preds[head_i][0, grid_y, grid_x, anchor_i, bb_i]
 
     # This is the gradient of the output neuron (top predicted or chosen)
     # with regard to the output feature map of the last conv layer
@@ -64,9 +64,14 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name, head_i, grid_x,
     # heatmap = conv_layer @ pooled_grads[..., tf.newaxis]
     # heatmap = tf.squeeze(heatmap)
 
-    # ours
+    ## ours
     heatmap = conv_layer * grads[0]
     heatmap = tf.reduce_mean(heatmap, axis=2)
+
+    ## experimental
+    # heatmap = grads[0]
+    # heatmap = tf.reduce_mean(heatmap, axis=2)
+
 
     # For visualization purpose, we will also normalize the heatmap between 0 & 1
     if normalize:

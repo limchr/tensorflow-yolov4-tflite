@@ -76,7 +76,7 @@ def main(_argv):
     scale_grid_cells = {0:52,1:26,2:13}
     scale_margins = {0:7,1:5,2:2}
 
-    break_at = 10 # find break_at number of classes at each grid position
+    break_at = 15 # find break_at number of classes at each grid position
     cls = 'person' # the class to search for in the data set
 
     # which neurons should be visualized
@@ -92,7 +92,7 @@ def main(_argv):
     print('enter loop')
 
     plot_layers = []
-    # plot_layers += [1,2,3] # last layers of backbone
+    # plot_layers += [1,2,3] # first layers of backbone
     # plot_layers += [75,76,77] # last layers of backbone
     # plot_layers += [103,104,105,106,107,108,109] # last layers of yolov4
     # plot_layers = [105,]
@@ -108,8 +108,8 @@ def main(_argv):
 
     for scale in plot_scales:
         margin = scale_margins[scale]
-        for x in range(margin,scale_grid_cells[scale]-margin-1):
-            for y in range(margin,scale_grid_cells[scale]-margin-1):
+        for x in range(margin,scale_grid_cells[scale]-margin):
+            for y in range(margin,scale_grid_cells[scale]-margin):
                 grid_iterate(x,y,scale, scale_grid_cells,break_at, cls, plot_neurons, plot_layers, cls_i, model, plt_dir)
 
 

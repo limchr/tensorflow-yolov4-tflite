@@ -50,8 +50,8 @@ def main(argv):
 
             img_path = os.path.join(base_path,str(num_cells))
             setup_clean_directory(img_path)
-            for x in cropr:
-                for y in cropr:
+            for xi,x in enumerate(cropr):
+                for yi,y in enumerate(cropr):
 
                     cropped = im[y:cropped_size+y, x:cropped_size+x, :]
                     import cv2
@@ -69,7 +69,7 @@ def main(argv):
                             conf = float(winner[4])
                             cropped_resized = draw_bbox(cropped_resized,[[xx*cs+1,yy*cs+1,cs-2,cs-2]], colors=[[1-conf, conf, 0.0]], border_width=1)
 
-                    save_image_wo_norm(cropped_resized,img_path,'img_%.5d_%.5d.jpg' % (x,y) )
+                    save_image_wo_norm(cropped_resized,img_path,'img_%.5d_%.5d.jpg' % (xi,yi) )
 
 
 
