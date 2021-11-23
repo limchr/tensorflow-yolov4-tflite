@@ -6,11 +6,13 @@ from os.path import isfile, join
 from absl.flags import FLAGS
 import cv2
 
-flags.DEFINE_string('coco_data', './coco_train2017.pkl', 'path to coco data')
+flags.DEFINE_string('coco_data', './train2017.pkl', 'path to coco data')
 flags.DEFINE_string('classes', '../data/classes/coco.names', 'path to classes file')
-flags.DEFINE_string('coco_path', "/home/chris/datasets/coco/train2017_resized", 'resize images to')
-flags.DEFINE_string('image_path', "/home/chris/datasets/coco/train2017", 'path to image val')
-flags.DEFINE_string('anno_path_val', '../data/dataset/coco_train2017.txt', 'path to classes file')
+# flags.DEFINE_string('coco_path', "/home/chris/datasets/coco/train2017_resized", 'resize images to')
+# flags.DEFINE_string('image_path', "/home/chris/datasets/coco/train2017", 'path to image val')
+flags.DEFINE_string('coco_path', "/vol/a2vq/data/coco/train2017_resized", 'resize images to')
+flags.DEFINE_string('image_path', "/vol/a2vq/data/coco/train2017", 'path to image val')
+flags.DEFINE_string('anno_path_val', '../data/dataset/train2017.txt', 'path output file of converted imagee path and bounding boxes')
 
 
 

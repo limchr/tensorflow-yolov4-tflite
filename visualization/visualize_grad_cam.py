@@ -80,7 +80,7 @@ def main(_argv):
     cls = 'person' # the class to search for in the data set
 
     # which neurons should be visualized
-    plot_neurons = 'wh'
+    plot_neurons = 'xywhcp'
 
     # read data set
     trainset = Dataset(FLAGS, is_training=True)
@@ -96,7 +96,7 @@ def main(_argv):
     # plot_layers += [75,76,77] # last layers of backbone
     # plot_layers += [103,104,105,106,107,108,109] # last layers of yolov4
     # plot_layers = [105,]
-    plot_layers += [75, 105]
+    plot_layers += [75, 103, 104, 105]
 
 
     plt_dir = 'gradcam_out'

@@ -7,8 +7,8 @@ import json
 import sys
 import pickle
 
-flags.DEFINE_string('input', '/Volumes/Elements/data/coco_dataset/coco/annotations/instances_val2017.json', 'path to classes file')
-flags.DEFINE_string('output', 'val2017.pkl', 'path to classes file')
+flags.DEFINE_string('input', '/vol/a2vq/data/coco/annotations/instances_train2017.json', 'path to classes file')
+flags.DEFINE_string('output', 'train2017.pkl', 'path to classes file')
 
 class COCO:
     """

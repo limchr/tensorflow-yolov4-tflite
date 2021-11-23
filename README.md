@@ -4,14 +4,27 @@
 YOLOv4, YOLOv4-tiny Implemented in Tensorflow 2.0. 
 Convert YOLO v4, YOLOv3, YOLO tiny .weights to .pb, .tflite and trt format for tensorflow, tensorflow lite, tensorRT.
 
+
+### Installation for Visualization
+
 Download yolov4.weights file: https://drive.google.com/open?id=1cewMfusmPjYWbrnuJRuKhPMwRe_b9PaT
+and save the file to ./data
+
+```bash
+# Convert darknet weights to tensorflow
+## yolov4
+python save_model.py --weights ./data/yolov4.weights --output ./checkpoints/yolov4-416 --input_size 416 --model yolov4 
+```
+
+Change paths in ./visualization/parameter.py and core/confic.py
+
+Download train2017 and annotation2017 from coco website and unzip
+
+change paths and run coco_convert and coco_annotation
 
 
 ### Prerequisites
 * Tensorflow 2.3.0rc0
-
-### Performance
-<p align="center"><img src="data/performance.png" width="640"\></p>
 
 ### Demo
 
