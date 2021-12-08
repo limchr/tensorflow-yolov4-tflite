@@ -1,6 +1,11 @@
+visualization/imgs_other/
+visualization/out_bb/
+visualization/out_shift/
+
+
 .idea/
 checkpoints/
-data/dataset/coco_train2017.txt
+data/dataset/train2017.txt
 data/yolov4.weights
 scripts/coco_train2017.pkl
 

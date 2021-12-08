@@ -43,7 +43,7 @@ def main(argv):
                     cell_size = int(im_size / num_cells)
                     imd = im.copy()
                     cellxywh = [cell_size * x, cell_size * y, cell_size, cell_size]
-                    imd = draw_bbox(imd, [cellxywh], colors=[[0.0, 0.0, 1.0]])
+                    imd = draw_bbox(imd, [cellxywh], colors=[[0.0, .45, .25]])
 
                     # use most certain anchorbox
                     cell = p[0, y, x, :, :]
@@ -56,7 +56,7 @@ def main(argv):
                     xywh[1] -= xywh[3] / 2
                     cl_i = np.argmax(winner[5:])
 
-                    imd = draw_bbox(imd, [xywh], colors=[[1-conf, conf, 0.0]],
+                    imd = draw_bbox(imd, [xywh], colors=[[1-conf, 0.0, conf]],
                                     labels=['%s(c:%.2f;a:%d)' % (class_names[cl_i], conf, i_max_conf)], font_scale=0.7)
                     save_image_wo_norm(imd,img_path,'img_%.5d_%.5d.jpg' % (x,y) )
 

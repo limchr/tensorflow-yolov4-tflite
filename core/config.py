@@ -14,8 +14,8 @@ cfg                           = __C
 # YOLO options
 __C.YOLO                      = edict()
 
-# __C.YOLO.ROOT_DIR = '/home/chris/src/python/tensorflow-yolov4-tflite/'
-__C.YOLO.ROOT_DIR = '/media/fast/climberg/src/python/tensorflow-yolov4-tflite/'
+__C.YOLO.ROOT_DIR = '/home/chris/src/python/tensorflow-yolov4-tflite/'
+# __C.YOLO.ROOT_DIR = '/media/fast/climberg/src/python/tensorflow-yolov4-tflite/'
 __C.YOLO.CLASSES              = os.path.join(__C.YOLO.ROOT_DIR,"data/classes/coco.names")
 __C.YOLO.ANCHORS              = [12,16, 19,36, 40,28, 36,75, 76,55, 72,146, 142,110, 192,243, 459,401]
 __C.YOLO.ANCHORS_V3           = [10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326]

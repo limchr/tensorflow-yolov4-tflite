@@ -67,7 +67,7 @@ def main(argv):
                             i_max_conf = np.argmax(confs)
                             winner = cell[i_max_conf]
                             conf = float(winner[4])
-                            cropped_resized = draw_bbox(cropped_resized,[[xx*cs+1,yy*cs+1,cs-2,cs-2]], colors=[[1-conf, conf, 0.0]], border_width=1)
+                            cropped_resized = draw_bbox(cropped_resized,[[xx*cs+1,yy*cs+1,cs-2,cs-2]], colors=[[1-conf, 0.0, conf]], border_width=1)
 
                     save_image_wo_norm(cropped_resized,img_path,'img_%.5d_%.5d.jpg' % (xi,yi) )
 

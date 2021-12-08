@@ -168,7 +168,7 @@ def draw_bbox(image, bboxes, colors=None, labels=None, border_width=None, font_s
                 c3[0] -= amount
                 c1[0] -= amount
             cv2.rectangle(image, tuple(c1), tuple(c3), col, -1)
-            cv2.putText(image, label, (c1[0], c1[1] - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0),
+            cv2.putText(image, label, (c1[0], c1[1] - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (1,1,1),
                         border_width // 2, lineType=cv2.LINE_AA)
     return image
 
