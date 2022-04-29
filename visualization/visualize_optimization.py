@@ -5,7 +5,7 @@ from core.dataset import Dataset
 import numpy as np
 
 from visualization.helper import get_model
-
+import matplotlib.pyplot as plt
 
 from visualization.visualization_helper import make_gradcam_heatmap
 
@@ -21,94 +21,182 @@ from keras.models import Model, Sequential
 from keras.layers import Conv2D, InputLayer
 from tfkerassurgeon.operations import delete_layer, insert_layer, delete_channels
 
+from tensorflow.keras import backend as K
+
+
+import tensorflow
+
+tensorflow.compat.v1.disable_eager_execution()
+
+
 
 def main(argv):
     # set up paths
-    setup_clean_directory(out_path_optimization)
+    # setup_clean_directory(out_path_optimization)
 
     model = get_model()
 
-    # inp = InputLayer(input_shape=(416, 416, 3))
-    # addon = Conv2D(3, 1, activation='relu', input_shape=(416, 416, 3))(inp.output)
-    # addon.output = model.layers[1]
+    def gradient_descent(x, iterations, step, max_win=None):
+        for i in range(iterations):
+            win_value, grad_values = fetch_win_and_grads([x])
+            if max_win is not None and win_value > max_win:
+                break
+            if i % 5 == 0:
+                print('Win at iteration', i, ':', win_value)
+            x -= step * grad_values
+        return x
+    def gradient_ascent(x, iterations, step, max_win=None):
+        for i in range(iterations):
+            win_value, grad_values = fetch_win_and_grads([x])
+            if max_win is not None and win_value > max_win:
+                break
+            if i % 5 == 0:
+                print('Win at iteration', i, ':', win_value)
+            x += step * grad_values
+        return x
 
-    new_model = insert_layer(model, model.layers[1], Conv2D(3, 1, activation='relu', input_shape=(416, 416, 3)))
+    ###
+    # optimizing for a high confidence of single anchor box
+    ###
 
-    # insert_layer_nonseq(model, 'conv2d', insert_layer_factory, 'asdf', position="replace")
+    output_neurons = model.output
+    win = K.square(output_neurons[5][0][6][6][0][4])
 
-    class_names = get_class_names()
+    input_neurons = model.input
+    grads = K.gradients(win, input_neurons)[0]
+    grads /= K.maximum(K.mean(K.abs(grads)), 1e-7)
+    outputs = [win, grads]
+    fetch_win_and_grads = K.function([input_neurons], outputs)
 
-def insert_layer_factory():
-    return Conv2D(3, 1, activation='relu', input_shape=(416, 416, 3))
 
-import re
-from keras.models import Model
+    starting_point = np.full((416, 416, 3), 0.5)  # 0.5 is medium gray
+    plt.figure()
+    plt.imshow(starting_point)
 
-def insert_layer_nonseq(model, layer_regex, insert_layer_factory,
-                        insert_layer_name=None, position='after'):
 
-    # Auxiliary dictionary to describe the network graph
-    network_dict = {'input_layers_of': {}, 'new_output_tensor_of': {}}
+    feed_to_net = np.expand_dims(starting_point, axis=0)
+    result_from_net = gradient_ascent(feed_to_net,
+            iterations=500,
+            step=0.005)
 
-    # Set the input layers of each layer
-    for layer in model.layers:
-        for node in layer._outbound_nodes:
-            layer_name = node.outbound_layer.name
-            if layer_name not in network_dict['input_layers_of']:
-                network_dict['input_layers_of'].update(
-                        {layer_name: [layer.name]})
-            else:
-                network_dict['input_layers_of'][layer_name].append(layer.name)
 
-    # Set the output tensor of the input layer
-    network_dict['new_output_tensor_of'].update(
-            {model.layers[0].name: model.input})
+    ideal_img = np.clip(np.copy(result_from_net[0]), 0, 1.0)
+    plt.figure()
+    plt.imshow(ideal_img)
+    plt.show()
 
-    # Iterate over all layers after the input
-    model_outputs = []
-    for layer in model.layers[1:]:
+    save_image_wo_norm(ideal_img,'out_opti','high_conf.jpg')
 
-        # Determine input tensors
-        layer_input = [network_dict['new_output_tensor_of'][layer_aux]
-                for layer_aux in network_dict['input_layers_of'][layer.name]]
-        if len(layer_input) == 1:
-            layer_input = layer_input[0]
+    ###
+    # optimizing for a high probability of a big cat exist in the center of the image
+    ###
 
-        # Insert layer if name matches the regular expression
-        if re.match(layer_regex, layer.name):
-            if position == 'replace':
-                x = layer_input
-            elif position == 'after':
-                x = layer(layer_input)
-            elif position == 'before':
-                pass
-            else:
-                raise ValueError('position must be: before, after or replace')
+    output_neurons = model.output
+    win = K.square(output_neurons[5][0][6][6][0][0])
 
-            new_layer = insert_layer_factory()
-            if insert_layer_name:
-                new_layer.name = insert_layer_name
-            else:
-                new_layer.name = '{}_{}'.format(layer.name,
-                                                new_layer.name)
-            x = new_layer(x)
-            print('New layer: {} Old layer: {} Type: {}'.format(new_layer.name,
-                                                            layer.name, position))
-            if position == 'before':
-                x = layer(x)
-        else:
-            x = layer(layer_input)
+    input_neurons = model.input
+    grads = K.gradients(win, input_neurons)[0]
+    grads /= K.maximum(K.mean(K.abs(grads)), 1e-7)
+    outputs = [win, grads]
+    fetch_win_and_grads = K.function([input_neurons], outputs)
 
-        # Set new output tensor (the original one, or the one of the inserted
-        # layer)
-        network_dict['new_output_tensor_of'].update({layer.name: x})
 
-        # Save tensor in output list if it is output in initial model
-        if layer_name in model.output_names:
-            model_outputs.append(x)
+    starting_point = np.full((416, 416, 3), 0.5)  # 0.5 is medium gray
+    plt.figure()
+    plt.imshow(starting_point)
 
-    return Model(inputs=model.inputs, outputs=model_outputs)
 
+    feed_to_net = np.expand_dims(starting_point, axis=0)
+    result_from_net = gradient_ascent(feed_to_net,
+            iterations=500,
+            step=0.005)
+
+
+    ideal_img = np.clip(np.copy(result_from_net[0]), 0, 1.0)
+    plt.figure()
+    plt.imshow(ideal_img)
+    plt.show()
+
+    save_image_wo_norm(ideal_img,'out_opti','high_human.jpg')
+
+
+
+    ###
+    # optimize for a specific height of object
+    ###
+    step_size = 0.1
+    for target_h in np.arange(0,1+step_size,step_size):
+
+        # target_h = 0.6
+
+        output_neurons = model.output
+        win = K.square(output_neurons[5][0][6][6][0][3])
+
+        input_neurons = model.input
+        grads = K.gradients(K.square(win-target_h), input_neurons)[0]
+        grads /= K.maximum(K.mean(K.abs(grads)), 1e-7)
+        outputs = [win, grads]
+        fetch_win_and_grads = K.function([input_neurons], outputs)
+
+
+
+
+        starting_point = np.full((416, 416, 3), 0.5)  # 0.5 is medium gray
+        plt.figure()
+        plt.imshow(starting_point)
+
+
+        feed_to_net = np.expand_dims(starting_point, axis=0)
+        result_from_net = gradient_descent(feed_to_net,
+                iterations=150,
+                step=0.005)
+
+
+        ideal_img = np.clip(np.copy(result_from_net[0]), 0, 1.0)
+        plt.figure()
+        plt.imshow(ideal_img)
+        plt.show()
+
+        save_image_wo_norm(ideal_img,'out_opti','height_%f.jpg'%(target_h,))
+
+
+    ###
+    # optimize for a specific x shift of small object
+    ###
+    step_size = 0.1
+    for target_x in np.arange(0,1+step_size,step_size):
+
+        # target_h = 0.6
+
+        output_neurons = model.output
+        win = K.square(output_neurons[1][0][6][6][0][0])
+
+        input_neurons = model.input
+        grads = K.gradients(K.square(win-target_x), input_neurons)[0]
+        grads /= K.maximum(K.mean(K.abs(grads)), 1e-7)
+        outputs = [win, grads]
+        fetch_win_and_grads = K.function([input_neurons], outputs)
+
+
+
+
+        starting_point = np.full((416, 416, 3), 0.5)  # 0.5 is medium gray
+        plt.figure()
+        plt.imshow(starting_point)
+
+
+        feed_to_net = np.expand_dims(starting_point, axis=0)
+        result_from_net = gradient_descent(feed_to_net,
+                iterations=150,
+                step=0.005)
+
+
+        ideal_img = np.clip(np.copy(result_from_net[0]), 0, 1.0)
+        plt.figure()
+        plt.imshow(ideal_img)
+        plt.show()
+
+        save_image_wo_norm(ideal_img,'out_opti','x_%f.jpg'%(target_x,))
 
 
 
