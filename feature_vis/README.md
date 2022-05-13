@@ -5,7 +5,8 @@ python approach_lucid \
 [--img / -i, default "None", choice=["Random", "None"] or a path seperated by spaces to an img (e.g) "data" "img.jpg"] \
 [--steps / -s, default 1500, Number of steps to train on] \
 [--step_size / -sz, default 0.05, 1e-08 < sz < 0.99~, step size during optimization] \
-[--save_every / -se] TODO:Finish!
+[--save_every / -se] TODO:Currently does nothing, change to saving intermediate images in code!
+[--total_variance / -tv, default -2.5e-10, 0 < tv < 0.1]
 ```
 
 
