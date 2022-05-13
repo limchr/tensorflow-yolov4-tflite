@@ -279,7 +279,7 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # TODO: Remove before running on cluster!
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # TODO: Remove before running on cluster!
 
     try:
         app.run(main)
