@@ -230,7 +230,7 @@ def main(argv):
     STEPS = args.steps
     STEP_SIZE = args.step_size
     SAVE_EVERY = args.save_every
-    TV = args.totoal_variance
+    TV = args.total_variance
     L1 = args.lasso_1
     L2 = args.lasso_2
     PAD = args.padding
@@ -259,7 +259,7 @@ def main(argv):
     NAMES_ANNO = f"{NEURONS} {SP_ANNO}"
 
     # Create the feature extraction model
-    dream_model = tf.keras.Model(inputs=base_model.input, outputs=NEURONS)
+    dream_model = tf.keras.Model(inputs=base_model.input, outputs=layers)
 
     # Create the DeepDream
     deepdream = DeepDream(dream_model)
