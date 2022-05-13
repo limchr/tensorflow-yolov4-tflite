@@ -241,7 +241,6 @@ def main(argv):
             IMG, SP_ANNO = get_starting_point(type="random")
     else:
         IMG, SP_ANNO = get_starting_point(os.path.join(*args.img))
-    PARAM_ANNO = f"tv={TV}, l1={L1}, l2={L2}, pad={PAD}"
 
 
     # Get the model
