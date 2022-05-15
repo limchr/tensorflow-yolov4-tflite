@@ -1,4 +1,4 @@
-import os.path
+import os
 import sys
 sys.path.append(os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')))
 print(os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')))
@@ -10,7 +10,7 @@ import numpy as np
 import time
 import cv2
 from feature_vis.config import *
-import  importlib.util
+import importlib.util
 
 CLI = flags.FLAGS
 flags.DEFINE_spaceseplist(
@@ -47,11 +47,17 @@ flags.DEFINE_integer(
     short_name="se",
     lower_bound= 10
 )
-flags.DEFINE_spaceseplist(
+flags.DEFINE_string(
     "file_name",  # name of the parameter
     "deep_dream_test",  # Good balance between results and waiting time
     "file name for saving images",
     short_name="fn"
+)
+flags.DEFINE_spaceseplist(
+    "file_path",  # name of the parameter
+    "",  # Good balance between results and waiting time
+    "file name for saving images",
+    short_name="fp"
 )
 # Regularizations
 flags.DEFINE_float(
@@ -150,8 +156,8 @@ class DeepDream(tf.Module):
 
 
 # Main Loop
-def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=50,file_name = str(int(time.time())), tv=0, l1=0, l2=0, pad=0,
-                          na=""):
+def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=50,file_path = os.path.join("feature_vis","output_images"), file_name = str(int(time.time())), tv=0, l1=0, l2=0, pad=0,
+                          na="",  show_img = False):
     # Convert from uint8 to the range expected by the model.
     img = tf.convert_to_tensor(img)
     param_anno = f"tv={tv}, l1={l1}, l2={l2}, pad={pad}"
@@ -163,7 +169,7 @@ def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=
 
     steps_remaining = steps
     step = 0
-    show(img, step, anno=f"{na}, {param_anno}")
+    if show_img: show(img, step, anno=f"{na}, {param_anno}")
     while steps_remaining:
         if steps_remaining > save_every:
             run_steps = tf.constant(save_every)
@@ -174,13 +180,12 @@ def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=
 
         loss, img = deepdream(img, run_steps, tf.constant(step_size), tv=tf.constant(tv), l1=tf.constant(l1),
                               l2=tf.constant(l2), pad=tf.constant(pad))
-        save(img=deprocess(img), path= os.path.join(os.path.curdir, "output_images", f"d_{file_name}_{step}.jpg"),
-             step = step, anno=f"{na}, {param_anno}")
+        save(img=deprocess(img), path= os.path.join(file_path,file_name + f"_{step}") , step = step, anno=f"{na}, {param_anno}")
         print("Step {}, loss {}".format(step, loss), end="\r")
     result = deprocess(img)
-    show(result, step=steps, anno=f"{na}, {param_anno}")
+    if show_img: show(result, step=steps, anno=f"{na}, {param_anno}")
     save(img=result,
-         path=os.path.join(os.path.curdir, "output_images", f"d_{file_name}_final.jpg"),
+         path=os.path.join(file_path,file_name + "_final"),
          step=steps,
          anno=f"{na}, {param_anno}")
     print("Saved and finished")
@@ -195,6 +200,9 @@ def main(argv):
     STEPS = CLI.steps
     STEP_SIZE = CLI.step_size
     SAVE_EVERY = CLI.save_every
+    FILE_PATH = os.path.join(os.path.curdir,"feature_vis","output_images", *CLI.file_path)
+    if not os.path.exists(FILE_PATH):
+        os.mkdir(FILE_PATH)
     FILE_NAME = CLI.file_name
     TV = CLI.total_variance
     L1 = CLI.lasso_1
@@ -219,7 +227,9 @@ def main(argv):
     output_neurons = base_model.output
     print(output_neurons[0].shape)
     time.sleep(3)
-    layers = [eval(s) for s in CLI.neurons]
+    layers = []
+    for s in CLI.neurons:
+        layers.append(eval(s))
 
     # Choose annotation for layer/neuron
     NAMES_ANNO = f"{CLI.neurons} {SP_ANNO}"
@@ -242,7 +252,9 @@ def main(argv):
         l2=L2,
         pad=PAD,
         #Annotations:
-        na = NAMES_ANNO)
+        na = NAMES_ANNO,
+        file_path= FILE_PATH,
+        file_name = FILE_NAME)
 
 
 if __name__ == '__main__':
