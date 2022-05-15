@@ -54,3 +54,5 @@ def get_starting_point(type="grey"):
         img = cv2.imread(type)
         img = cv2.resize(img, (416, 416)) /255.
         return img.astype("float32"), "image"
+
+

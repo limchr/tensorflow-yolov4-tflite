@@ -1,123 +1,90 @@
 import os.path
-import argparse
+import sys
+sys.path.append(os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')))
+print(os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')))
 from visualization.helper import get_model
-from absl import app, flags, logging
+from absl import app, flags
 from feature_vis.helper import *
 import tensorflow as tf
 import numpy as np
 import time
 import cv2
 from feature_vis.config import *
+import  importlib.util
 
-
-###
-###
-# Example use
-# python approach_lucid.py
-# --neurons "output_neurons[5][0][6][6][0][5]" /// allows multiple seperated by space / default "output_neurons[5][0][6][6][0][5]"
-# --img "inputs" "001.jpg" /// parse path in strings, results in "inputs/001.jpg" /default "None" (gray image)
-#
-#
-
-###
-###  updates_every=50, tv=0, l1=0, l2=0, pad=0
-
-
-# thanks to https://stackoverflow.com/a/64259328
-def range_limited_float(mini, maxi):
-    """Return function handle of an argument type function for
-           ArgumentParser checking a float range: mini <= arg <= maxi
-             mini - minimum acceptable argument
-             maxi - maximum acceptable argument"""
-
-    def range_limited_float_checker(arg):
-        """ Type function for argparse - a float within some predefined bounds """
-        try:
-            f = float(arg)
-        except ValueError:
-            raise argparse.ArgumentTypeError("Must be a floating point number")
-        if f < mini or f > maxi:
-            raise argparse.ArgumentTypeError("Argument must be < " + str(mini) + "and > " + str(maxi))
-        return f
-
-    return range_limited_float_checker
-
-
-CLI = argparse.ArgumentParser()
-CLI.add_argument(
-    "--neurons",  # name of the parameter
-    "-n",
-    nargs="+",  # creates a list
-    type=str,  # each is a string, so we need to call eval on it
-    default="output_neurons[5][0][6][6][0][5]",  # optimize central smallest bounding box of the biggest head for human
-    help="String of Neurons to Optimize, seperated by spaces, default is output_neurons[5][0][6][6][0][5] "
+CLI = flags.FLAGS
+flags.DEFINE_spaceseplist(
+    "neurons",  # name of the parameter
+    "output_neurons[5][0][6][6][0][5]",
+    "String of Neurons to Optimize, seperated by spaces, default is output_neurons[5][0][6][6][0][5]",
+    short_name="n"
 )
-CLI.add_argument(
-    "--img",  # name of the parameter
-    "-i",
-    nargs="*",  # creates a list
-    type=str,  # each is a folder, so we need to use os.path.join later TODO:Implement this
-    default="None",  # optimize central smallest bounding box of the biggest head for human
-    help="String of path to single input image to use via os.path, seperated by spaces, default is a gray image "
+flags.DEFINE_spaceseplist(
+    "img",  # name of the parameter
+    "None",  # optimize central smallest bounding box of the biggest head for human
+    "String of path to single input image to use via os.path, seperated by spaces, default is a gray image",
+    short_name="i"
 )
-CLI.add_argument(
-    "--steps",  # name of the parameter
-    "-s",
-    nargs=1,  # single input
-    type=int,  # type declaration
-    default=1500,  # Good balance between results and waiting time
-    help="Number of steps for neuron optimization, default 1500"
+flags.DEFINE_integer(
+    "steps",  # name of the parameter
+    1500,  # Good balance between results and waiting time
+    "Number of steps for neuron optimization, default 1500",
+    short_name="s",
+    lower_bound = 100
 )
-CLI.add_argument(
-    "--step_size",  # name of the parameter
-    "-sz",  # alternative input
-    nargs=1,  # single input
-    type=range_limited_float(0.00000001, 0.99999999),  # custom type above that only allow between 0.[0*7]1 -> 0.[9*8]
-    default=0.05,  # Good balance between results and waiting time
-    help="(0,1) float as step size, default 0.01"
+flags.DEFINE_float(
+    "step_size",  # name of the parameter
+    0.05,  # Good balance between results and waiting time
+    "(0,1) float as step size, default 0.01",
+    short_name="sz",
+    lower_bound=0.000005,
+    upper_bound=0.5
 )
-CLI.add_argument(
-    "--save_every",  # name of the parameter
-    "-se",  # alternative input
-    nargs=1,  # single input
-    type=int,
-    default=100,  # Good balance between results and waiting time
-    help="[0-steps] int, steps after which an intermediate image is saved"
+flags.DEFINE_integer(
+    "save_every",  # name of the parameter
+    100,  # Good balance between results and waiting time
+    "[0-steps] int, steps after which an intermediate image is saved",
+    short_name="se",
+    lower_bound= 10
+)
+flags.DEFINE_spaceseplist(
+    "file_name",  # name of the parameter
+    "deep_dream_test",  # Good balance between results and waiting time
+    "file name for saving images",
+    short_name="fn"
 )
 # Regularizations
-CLI.add_argument(
-    "--total_variance",  # name of the parameter
-    "-tv",  # alternative input
-    nargs=1,  # single input
-    type=range_limited_float(0., 0.1),
-    default=-0.000000025,  # Good balance between results and waiting time
-    help="[0-0.11] float, Total variance regularization default=-0.000000025"
+flags.DEFINE_float(
+    "total_variance",  # name of the parameter
+    -0.000000025,  # Good balance between results and waiting time
+    "[0-0.1] float, Total variance regularization default=-0.000000025",
+    short_name="tv",
+    lower_bound=-0.1,
+    upper_bound=0.1
 )
-CLI.add_argument(
-    "--lasso_1",  # name of the parameter
-    "-l1",  # alternative input
-    nargs=1,  # single input
-    type=range_limited_float(0., 0.99),
-    default=0.2,  # Good balance between results and waiting time
-    help="(0,0.99) float, lasso 1 regularization"
+flags.DEFINE_float(
+    "lasso_1",  # name of the parameter
+    0.2,  # Good balance between results and waiting time
+    "(0,0.99) float, lasso 1 regularization",
+    short_name="l1",
+    lower_bound=0.0,
+    upper_bound=0.99
 )
-CLI.add_argument(
-    "--lasso_2",  # name of the parameter
-    "-l2",  # alternative input
-    nargs=1,  # single input
-    type=int,
-    choices=range(0,10),
-    default=2,  # Good balance between results and waiting time
-    help="(0,10) int, lasso 2 regularization"
+flags.DEFINE_integer(
+    "lasso_2",  # name of the parameter
+    2,  # Good balance between results and waiting time
+    "(0,10) int, lasso 2 regularization",
+    short_name="l2",
+    lower_bound=0,
+    upper_bound=10
 )
-CLI.add_argument(
-    "--padding",  # name of the parameter
-    "-p",  # alternative input
-    nargs=1,  # single input
-    type=int,
-    choices=range(0,10),
-    default=1,  # Good balance between results and waiting time
-    help="(0,10) int, pad regularization"
+flags.DEFINE_integer(
+    "padding",  # name of the parameter
+    1,  # Good balance between results and waiting time
+    "(0,10) int, pad regularization",
+    short_name="p",
+    lower_bound=0,
+    upper_bound=10
 )
 
 
@@ -183,7 +150,7 @@ class DeepDream(tf.Module):
 
 
 # Main Loop
-def run_deep_dream_simple(img, deepdream ,steps=100, step_size=0.01, updates_every=50, tv=0, l1=0, l2=0, pad=0,
+def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=50,file_name = str(int(time.time())), tv=0, l1=0, l2=0, pad=0,
                           na=""):
     # Convert from uint8 to the range expected by the model.
     img = tf.convert_to_tensor(img)
@@ -198,8 +165,8 @@ def run_deep_dream_simple(img, deepdream ,steps=100, step_size=0.01, updates_eve
     step = 0
     show(img, step, anno=f"{na}, {param_anno}")
     while steps_remaining:
-        if steps_remaining > updates_every:
-            run_steps = tf.constant(updates_every)
+        if steps_remaining > save_every:
+            run_steps = tf.constant(save_every)
         else:
             run_steps = tf.constant(steps_remaining)
         steps_remaining -= run_steps
@@ -207,12 +174,13 @@ def run_deep_dream_simple(img, deepdream ,steps=100, step_size=0.01, updates_eve
 
         loss, img = deepdream(img, run_steps, tf.constant(step_size), tv=tf.constant(tv), l1=tf.constant(l1),
                               l2=tf.constant(l2), pad=tf.constant(pad))
-        show(deprocess(img), step, anno=f"{na}, {param_anno}")
+        save(img=deprocess(img), path= os.path.join(os.path.curdir, "output_images", f"d_{file_name}_{step}.jpg"),
+             step = step, anno=f"{na}, {param_anno}")
         print("Step {}, loss {}".format(step, loss), end="\r")
     result = deprocess(img)
     show(result, step=steps, anno=f"{na}, {param_anno}")
     save(img=result,
-         path=os.path.join(os.path.curdir, "output_images", f"dream_img_{int(time.time())}.jpg"),
+         path=os.path.join(os.path.curdir, "output_images", f"d_{file_name}_final.jpg"),
          step=steps,
          anno=f"{na}, {param_anno}")
     print("Saved and finished")
@@ -221,26 +189,23 @@ def run_deep_dream_simple(img, deepdream ,steps=100, step_size=0.01, updates_eve
 def main(argv):
     # argv structure:
     # 0 = file name, list of neurons
-    args, unknown_args = CLI.parse_known_args()
-    print(CLI.parse_args(["-n", "a", "b"]))
-    print(args, " \n those are unknown:", unknown_args)
+
 
     # Set hyperparameters
-    NEURONS = args.neurons
-    STEPS = args.steps
-    STEP_SIZE = args.step_size
-    SAVE_EVERY = args.save_every
-    TV = args.total_variance
-    L1 = args.lasso_1
-    L2 = args.lasso_2
-    PAD = args.padding
-    if type(args.img) == str:
-        if args.img == "None":
-            IMG, SP_ANNO = get_starting_point(type="grey")
-        elif args.img == "Random":
-            IMG, SP_ANNO = get_starting_point(type="random")
+    STEPS = CLI.steps
+    STEP_SIZE = CLI.step_size
+    SAVE_EVERY = CLI.save_every
+    FILE_NAME = CLI.file_name
+    TV = CLI.total_variance
+    L1 = CLI.lasso_1
+    L2 = CLI.lasso_2
+    PAD = CLI.padding
+    if CLI.img[0] == "None":
+        IMG, SP_ANNO = get_starting_point(type="grey")
+    elif CLI.img[0] == "Random":
+        IMG, SP_ANNO = get_starting_point(type="random")
     else:
-        IMG, SP_ANNO = get_starting_point(os.path.join(*args.img))
+        IMG, SP_ANNO = get_starting_point(os.path.join(*CLI.img))
 
 
     # Get the model
@@ -252,10 +217,12 @@ def main(argv):
 
     # or choose a neuron
     output_neurons = base_model.output
-    layers = [eval(s) for s in NEURONS] if type(NEURONS) == list else eval(NEURONS)
+    print(output_neurons[0].shape)
+    time.sleep(3)
+    layers = [eval(s) for s in CLI.neurons]
 
     # Choose annotation for layer/neuron
-    NAMES_ANNO = f"{NEURONS} {SP_ANNO}"
+    NAMES_ANNO = f"{CLI.neurons} {SP_ANNO}"
 
     # Create the feature extraction model
     dream_model = tf.keras.Model(inputs=base_model.input, outputs=layers)
@@ -268,7 +235,7 @@ def main(argv):
         deepdream=deepdream,
         steps=STEPS,
         step_size=STEP_SIZE,
-        updates_every= SAVE_EVERY, #TODO: Still shows images instead of saving them as a gif
+        save_every= SAVE_EVERY,
         #Regularizations
         tv=TV,
         l1=L1,
@@ -279,7 +246,6 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # TODO: Remove before running on cluster!
 
     try:
         app.run(main)

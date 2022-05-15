@@ -14,7 +14,7 @@ cfg                           = __C
 # YOLO options
 __C.YOLO                      = edict()
 
-__C.YOLO.ROOT_DIR = os.path.pardir
+__C.YOLO.ROOT_DIR = os.path.abspath(os.path.curdir) if not "feature_vis" in os.path.abspath(os.path.curdir) else os.path.abspath(os.path.pardir)
 # __C.YOLO.ROOT_DIR = '/media/fast/climberg/src/python/tensorflow-yolov4-tflite/'
 __C.YOLO.CLASSES              = os.path.join(__C.YOLO.ROOT_DIR,"data","classes","coco.names")
 __C.YOLO.ANCHORS              = [12,16, 19,36, 40,28, 36,75, 76,55, 72,146, 142,110, 192,243, 459,401]
