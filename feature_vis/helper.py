@@ -36,6 +36,7 @@ def save(img, path, step="done", anno=""):
     plt.savefig(path)
 
 # Regularization by transformation robustness
+@tf.function
 def crop_and_pad(img, pad, mode="REFLECT", seed=None):
     img = tf.convert_to_tensor(img)
     shape = tf.shape(img)
