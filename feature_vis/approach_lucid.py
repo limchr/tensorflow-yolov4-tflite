@@ -148,8 +148,7 @@ class DeepDream(tf.Module):
             # In gradient ascent, the "loss" is maximized so that the input image increasingly "excites" the layers.
             # You can update the image by directly adding the gradients (because they're the same shape!)
             img = img + gradients * step_size
-            img = crop_and_pad(img,
-                               pad)  # TODO: Observe whether it might be better to use crop and pad only every x steps
+            #img = crop_and_pad(img, pad)
             # img = tf.clip_by_value(img, -1, 1)
 
         return loss, img
