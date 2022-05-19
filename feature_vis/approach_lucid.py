@@ -113,7 +113,7 @@ def calc_loss(img, model, prev_img, tv, l1, l2, c):
     # Regularization for color hist
     hist = color_histogram(img, 32)
     prev_hist = color_histogram(prev_img, 32)
-    hist_diff = tf.math.abs(hist - prev_hist)
+    hist_diff = tf.reduce_sum(tf.math.absl(hist - prev_hist))
 
     # Regularization
     return (l1 * loss_l1) + (tv * tf.image.total_variation(img)) + (l2 * loss_l2) + (c * hist_diff)
@@ -142,7 +142,7 @@ class DeepDream(tf.Module):
                 # This needs gradients relative to `img`
                 # `GradientTape` only watches `tf.Variable`s by default
                 tape.watch(img)
-                loss = calc_loss(img, model=self.model, prev_img=prev_img, tv=tv, l1=l1, l2=l2, c=1)
+                loss = calc_loss(img, model=self.model, prev_img=prev_img, tv=tv, l1=l1, l2=l2, c=tf.constant(1.))
 
             # Calculate the gradient of the loss with respect to the pixels of the input image.
             gradients = tape.gradient(loss, img)
