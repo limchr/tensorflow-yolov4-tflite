@@ -53,7 +53,9 @@ def color_histogram(img, nbins):
     histogram_g = tf.histogram_fixed_width(img[:, :, 1], value_range=(0, 1), nbins=nbins)
     histogram_b = tf.histogram_fixed_width(img[:, :, 2], value_range=(0, 1), nbins=nbins)
 
-    return tf.concat([histogram_r, histogram_g, histogram_b])
+    combined = tf.concat([histogram_r, histogram_g, histogram_b], axis=0)
+
+    return tf.cast(combined, dtype=tf.float32)
 
 def get_starting_point(type="grey"):
     if type == "grey" or type == "gray":
