@@ -95,7 +95,7 @@ flags.DEFINE_integer(
 
 
 # Define loss function
-def calc_loss(img, model, tv, l1, l2):
+def calc_loss(img, model, prev_img, tv, l1, l2, c):
     # Pass forward the image through the model to retrieve the activations.
     # Converts the image into a batch of size 1.
     img_batch = tf.expand_dims(img, axis=0)
@@ -111,8 +111,13 @@ def calc_loss(img, model, tv, l1, l2):
     loss_l1 = tf.reduce_sum(losses_l1)
     loss_l2 = tf.reduce_sum(losses_l2)
 
+    # Regularization for color hist
+    hist = color_histogram(img, 32)
+    prev_hist = color_histogram(prev_img, 32)
+    hist_diff = tf.math.abs(hist - prev_hist)
+
     # Regularization
-    return (l1 * loss_l1) + (tv * tf.image.total_variation(img)) + (l2 * loss_l2)
+    return (l1 * loss_l1) + (tv * tf.image.total_variation(img)) + (l2 * loss_l2) + (c * hist_diff)
 
 
 # DeepDream module
@@ -132,12 +137,13 @@ class DeepDream(tf.Module):
     def __call__(self, img, steps, step_size, tv, l1, l2, pad):
         print("Tracing")
         loss = tf.constant(0.0)
+        prev_img = tf.identity(img)
         for n in tf.range(steps):
             with tf.GradientTape() as tape:
                 # This needs gradients relative to `img`
                 # `GradientTape` only watches `tf.Variable`s by default
                 tape.watch(img)
-                loss = calc_loss(img, self.model, tv=tv, l1=l1, l2=l2)
+                loss = calc_loss(img, model=self.model, prev_img=prev_img, tv=tv, l1=l1, l2=l2, c=1)
 
             # Calculate the gradient of the loss with respect to the pixels of the input image.
             gradients = tape.gradient(loss, img)
@@ -147,6 +153,7 @@ class DeepDream(tf.Module):
 
             # In gradient ascent, the "loss" is maximized so that the input image increasingly "excites" the layers.
             # You can update the image by directly adding the gradients (because they're the same shape!)
+            prev_img = tf.identity(img)
             img = img + gradients * step_size
             img = crop_and_pad(img, pad)
             # img = tf.clip_by_value(img, -1, 1)
@@ -156,7 +163,7 @@ class DeepDream(tf.Module):
 
 # Main Loop
 def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=50,file_path = os.path.join("feature_vis","output_images"), file_name = str(int(time.time())), tv=0, l1=0, l2=0, pad=0,
-                          na="",  show_img = False):
+                          na="",  show_img = True):
     # Convert from uint8 to the range expected by the model.
     img = tf.convert_to_tensor(img)
     param_anno = f"tv={tv}, l1={l1}, l2={l2}, pad={pad}"
