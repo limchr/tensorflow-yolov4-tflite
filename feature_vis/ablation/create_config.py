@@ -11,8 +11,7 @@ for n in choices:
 	if n[0] + n[1] == 0:
 		continue
 	with open("config_"+str(i)+".cfg", "a+") as f:
-		f.write(f"--lasso_1={n[0]}\n--lasso_2={n[1]}\n--padding={n[2]}\n--total_variance={format(n[3], '.8f')}\n" +
-				f"--file_name='{n[0]}_{n[1]}_{n[2]}_{i}' --file_path='abl_{i}'\n--reproduce\n--steps=2000\n--save_every=500")
+		f.write(f"--lasso_1={n[0]}\n--lasso_2={n[1]}\n--padding={n[2]}\n--total_variance={format(n[3], '.8f')}\n--file_name='{i}'\n--file_path='abl_{i}'\n--reproduce\n--steps=2000\n--save_every=500")
 		i += 1
 
 
