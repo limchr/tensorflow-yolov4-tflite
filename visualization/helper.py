@@ -48,7 +48,7 @@ def get_model():
             bbox_tensors.append(bbox_tensor)
 
     model = tf.keras.Model(input_layer, bbox_tensors)
-    model.summary()
+    #model.summary()
 
     if FLAGS.weights == None:
         print("Training from scratch")
