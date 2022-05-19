@@ -12,6 +12,7 @@ import cv2
 from feature_vis.config import *
 import importlib.util
 
+
 CLI = flags.FLAGS
 flags.DEFINE_spaceseplist(
     "neurons",  # name of the parameter
@@ -63,34 +64,32 @@ flags.DEFINE_spaceseplist(
 flags.DEFINE_float(
     "total_variance",  # name of the parameter
     -0.000000025,  # Good balance between results and waiting time
-    "[0-0.1] float, Total variance regularization default=-0.000000025",
+    "Float, Total variance regularization default=-0.000000025",
     short_name="tv",
-    lower_bound=-0.1,
-    upper_bound=0.1
+    upper_bound=0.000000001
 )
 flags.DEFINE_float(
     "lasso_1",  # name of the parameter
     0.2,  # Good balance between results and waiting time
     "(0,0.99) float, lasso 1 regularization",
-    short_name="l1",
-    lower_bound=0.0,
-    upper_bound=0.99
+    short_name="l1"
 )
-flags.DEFINE_integer(
+flags.DEFINE_float(
     "lasso_2",  # name of the parameter
-    2,  # Good balance between results and waiting time
-    "(0,10) int, lasso 2 regularization",
-    short_name="l2",
-    lower_bound=0,
-    upper_bound=10
+    2.0,  # Good balance between results and waiting time
+    " int, lasso 2 regularization",
+    short_name="l2"
 )
 flags.DEFINE_integer(
     "padding",  # name of the parameter
     1,  # Good balance between results and waiting time
-    "(0,10) int, pad regularization",
-    short_name="p",
-    lower_bound=0,
-    upper_bound=10
+    " int, pad regularization",
+    short_name="p"
+)
+flags.DEFINE_bool(
+    "reproduce",
+    False,
+    "Produces reproducable code with seed 2022"
 )
 
 
@@ -200,8 +199,8 @@ def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=
 def main(argv):
     # argv structure:
     # 0 = file name, list of neurons
-
-
+    if CLI.reproduce:
+        tf.random.set_seed(2022)
     # Set hyperparameters
     STEPS = CLI.steps
     STEP_SIZE = CLI.step_size
