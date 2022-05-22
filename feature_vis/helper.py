@@ -19,7 +19,7 @@ def show(img, step=None, anno=""):
         plt.suptitle(f"Step {step}")
     else:
         plt.suptitle(f"Step unknown")
-    plt.title(anno)
+    plt.title(anno, fontdict={"fontsize":10})
     plt.axis('off')
     plt.show()
 
@@ -31,7 +31,7 @@ def save(img, path, step="done", anno=""):
         plt.suptitle(f"Step {step}")
     else:
         plt.suptitle(f"Step unknown")
-    plt.title(anno)
+    plt.title(anno, fontdict={"fontsize":10})
     plt.axis('off')
     plt.savefig(path)
 

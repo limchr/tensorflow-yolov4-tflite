@@ -11,7 +11,7 @@ import time
 import cv2
 from feature_vis.config import *
 import importlib.util
-
+#output_neurons[5][0][8][6][0][6]
 
 CLI = flags.FLAGS
 flags.DEFINE_spaceseplist(
@@ -45,8 +45,7 @@ flags.DEFINE_integer(
     "save_every",  # name of the parameter
     100,  # Good balance between results and waiting time
     "[0-steps] int, steps after which an intermediate image is saved",
-    short_name="se",
-    lower_bound= 10
+    short_name="se"
 )
 flags.DEFINE_string(
     "file_name",  # name of the parameter
@@ -86,6 +85,12 @@ flags.DEFINE_integer(
     " int, pad regularization",
     short_name="p"
 )
+flags.DEFINE_integer(
+    "c",  # name of the parameter
+    0,  # Good balance between results and waiting time
+    " float, color hist regularization",
+    short_name="c"
+)
 flags.DEFINE_bool(
     "reproduce",
     False,
@@ -113,7 +118,7 @@ def calc_loss(img, model, prev_img, tv, l1, l2, c):
     # Regularization for color hist
     hist = color_histogram(img, 32)
     prev_hist = color_histogram(prev_img, 32)
-    hist_diff = tf.reduce_sum(tf.math.absl(hist - prev_hist))
+    hist_diff = tf.reduce_sum(tf.math.abs(hist - prev_hist))
 
     # Regularization
     return (l1 * loss_l1) + (tv * tf.image.total_variation(img)) + (l2 * loss_l2) + (c * hist_diff)
@@ -131,9 +136,10 @@ class DeepDream(tf.Module):
                          tf.TensorSpec(shape=[], dtype=tf.float32),
                          tf.TensorSpec(shape=[], dtype=tf.float32),
                          tf.TensorSpec(shape=[], dtype=tf.float32),
-                         tf.TensorSpec(shape=[], dtype=tf.int32))
+                         tf.TensorSpec(shape=[], dtype=tf.int32),
+                         tf.TensorSpec(shape=[], dtype=tf.float32))
     )
-    def __call__(self, img, steps, step_size, tv, l1, l2, pad):
+    def __call__(self, img, steps, step_size, tv, l1, l2, pad, c):
         print("Tracing")
         loss = tf.constant(0.0)
         prev_img = tf.identity(img)
@@ -142,7 +148,7 @@ class DeepDream(tf.Module):
                 # This needs gradients relative to `img`
                 # `GradientTape` only watches `tf.Variable`s by default
                 tape.watch(img)
-                loss = calc_loss(img, model=self.model, prev_img=prev_img, tv=tv, l1=l1, l2=l2, c=tf.constant(1.))
+                loss = calc_loss(img, model=self.model, prev_img=prev_img, tv=tv, l1=l1, l2=l2, c=c)
 
             # Calculate the gradient of the loss with respect to the pixels of the input image.
             gradients = tape.gradient(loss, img)
@@ -161,7 +167,7 @@ class DeepDream(tf.Module):
 
 
 # Main Loop
-def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=50,file_path = os.path.join("feature_vis","output_images"), file_name = str(int(time.time())), tv=0, l1=0, l2=0, pad=0,
+def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=50,file_path = os.path.join("feature_vis","output_images"), file_name = str(int(time.time())), tv=0, l1=0, l2=0, pad=0, c=0,
                           na="",  show_img = True):
     # Convert from uint8 to the range expected by the model.
     img = tf.convert_to_tensor(img)
@@ -171,6 +177,7 @@ def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=
     l1 = tf.convert_to_tensor(l1, dtype="float32")
     l2 = tf.convert_to_tensor(l2, dtype="float32")
     pad = tf.convert_to_tensor(pad, dtype="int32")
+    c = tf.convert_to_tensor(c, dtype="float32")
 
     steps_remaining = steps
     step = 0
@@ -184,8 +191,9 @@ def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=
         step += run_steps
 
         loss, img = deepdream(img, run_steps, tf.constant(step_size), tv=tf.constant(tv), l1=tf.constant(l1),
-                              l2=tf.constant(l2), pad=tf.constant(pad))
-        save(img=deprocess(img), path= os.path.join(file_path,file_name + f"_{step}") , step = step, anno=f"{na}, {param_anno}")
+                              l2=tf.constant(l2), pad=tf.constant(pad), c=tf.constant(c))
+        if show_img: show(deprocess(img), step=step, anno=f"{na}, {param_anno}")
+        #save(img=deprocess(img), path= os.path.join(file_path,file_name + f"_{step}") , step = step, anno=f"{na}, {param_anno}")
         print("Step {}, loss {}".format(step, loss), end="\r")
     result = deprocess(img)
     if show_img: show(result, step=steps, anno=f"{na}, {param_anno}")
@@ -213,6 +221,7 @@ def main(argv):
     L1 = CLI.lasso_1
     L2 = CLI.lasso_2
     PAD = CLI.padding
+    C = CLI.c
     if CLI.img[0] == "None":
         IMG, SP_ANNO = get_starting_point(type="grey")
     elif CLI.img[0] == "Random":
@@ -230,7 +239,6 @@ def main(argv):
 
     # or choose a neuron
     output_neurons = base_model.output
-    print(output_neurons[0].shape)
     time.sleep(3)
     layers = []
     for s in CLI.neurons:
@@ -256,6 +264,7 @@ def main(argv):
         l1=L1,
         l2=L2,
         pad=PAD,
+        c=C,
         #Annotations:
         na = NAMES_ANNO,
         file_path= FILE_PATH,
