@@ -22,79 +22,75 @@ flags.DEFINE_spaceseplist(
 )
 flags.DEFINE_spaceseplist(
     "img",  # name of the parameter
-    "None",  # optimize central smallest bounding box of the biggest head for human
+    "None",  # Gray img
     "String of path to single input image to use via os.path, seperated by spaces, default is a gray image",
     short_name="i"
 )
 flags.DEFINE_integer(
     "steps",  # name of the parameter
-    1500,  # Good balance between results and waiting time
-    "Number of steps for neuron optimization, default 1500",
-    short_name="s",
-    lower_bound = 100
+    1500,
+    "Expects integer, Number of steps for neuron optimization, default 1500",
+    short_name="s"
 )
 flags.DEFINE_float(
     "step_size",  # name of the parameter
-    0.05,  # Good balance between results and waiting time
-    "(0,1) float as step size, default 0.01",
-    short_name="sz",
-    lower_bound=0.000005,
-    upper_bound=0.5
+    0.05,
+    "Expects float as step size, default 0.01",
+    short_name="sz"
 )
 flags.DEFINE_integer(
     "save_every",  # name of the parameter
-    100,  # Good balance between results and waiting time
-    "[0-steps] int, steps after which an intermediate image is saved",
+    100,
+    "Expects int, steps after which an intermediate image is saved, default 100",
     short_name="se"
 )
 flags.DEFINE_string(
     "file_name",  # name of the parameter
-    "deep_dream_test",  # Good balance between results and waiting time
-    "file name for saving images",
+    "deep_dream_test",
+    "Expects string, file name for saving images, default deep_dream_test",
     short_name="fn"
 )
 flags.DEFINE_spaceseplist(
     "file_path",  # name of the parameter
-    "",  # Good balance between results and waiting time
-    "file name for saving images",
+    "",
+    "Expects list of strings seperated by spaces, file directory for saving images, default output_images",
     short_name="fp"
 )
 # Regularizations
 flags.DEFINE_float(
     "total_variance",  # name of the parameter
     -0.000000025,  # Good balance between results and waiting time
-    "Float, Total variance regularization default=-0.000000025",
-    short_name="tv",
-    upper_bound=0.000000001
+    "Expects float, Total variance regularization, default=-0.000000025",
+    short_name="tv"
 )
 flags.DEFINE_float(
     "lasso_1",  # name of the parameter
     0.2,  # Good balance between results and waiting time
-    "(0,0.99) float, lasso 1 regularization",
+    "Expects float, l1 regularization, default 0.2",
     short_name="l1"
 )
 flags.DEFINE_float(
     "lasso_2",  # name of the parameter
     2.0,  # Good balance between results and waiting time
-    " int, lasso 2 regularization",
+    "Expects float, l2 regularization, default 2.0",
     short_name="l2"
 )
 flags.DEFINE_integer(
     "padding",  # name of the parameter
     1,  # Good balance between results and waiting time
-    " int, pad regularization",
+    "Expects int, pad regularization, default 1",
     short_name="p"
 )
 flags.DEFINE_integer(
-    "c",  # name of the parameter
+    "color_difference",  # name of the parameter
     0,  # Good balance between results and waiting time
-    " float, color hist regularization",
+    "Expects float, color hist regularization, pairs well with input img, default 0",
     short_name="c"
 )
 flags.DEFINE_bool(
     "reproduce",
     False,
-    "Produces reproducable code with seed 2022"
+    "Produces reproducable code with seed 2022, default false"
 )
 
 
@@ -193,7 +189,8 @@ def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=
         loss, img = deepdream(img, run_steps, tf.constant(step_size), tv=tf.constant(tv), l1=tf.constant(l1),
                               l2=tf.constant(l2), pad=tf.constant(pad), c=tf.constant(c))
         if show_img: show(deprocess(img), step=step, anno=f"{na}, {param_anno}")
-        #save(img=deprocess(img), path= os.path.join(file_path,file_name + f"_{step}") , step = step, anno=f"{na}, {param_anno}")
+        save(img=deprocess(img), path=os.path.join(file_path, file_name + f"_{step}"), step=step,
+             anno=f"{na}, {param_anno}")
         print("Step {}, loss {}".format(step, loss), end="\r")
     result = deprocess(img)
     if show_img: show(result, step=steps, anno=f"{na}, {param_anno}")
@@ -205,8 +202,6 @@ def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=
 
     return result
 def main(argv):
-    # argv structure:
-    # 0 = file name, list of neurons
     if CLI.reproduce:
         tf.random.set_seed(2022)
     # Set hyperparameters
@@ -221,7 +216,7 @@ def main(argv):
     L1 = CLI.lasso_1
     L2 = CLI.lasso_2
     PAD = CLI.padding
-    C = CLI.c
+    C = CLI.color_difference
     if CLI.img[0] == "None":
         IMG, SP_ANNO = get_starting_point(type="grey")
     elif CLI.img[0] == "Random":
@@ -239,7 +234,6 @@ def main(argv):
 
     # or choose a neuron
     output_neurons = base_model.output
-    time.sleep(3)
     layers = []
     for s in CLI.neurons:
         layers.append(eval(s))
