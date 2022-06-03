@@ -38,6 +38,11 @@ Syntax "output_neurons[A][B][C][D][E][F]" where:
 Due to the nature of output_neurons, one can easily combine multiple outputs for different anchor boxes and even combine
 different heads easily.
 
+## Note on using config files  
+Instead of supplying the above comments, one may add `--flagfile path/to/file` to the python command. Please refer to the absl [documentation](https://abseil.io/docs/python/guides/flags#a-note-about---flagfile) for further information and find an example in `my_config.cfg`
+
+
+
 ## Files
 
 ### detect_steps.py
