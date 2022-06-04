@@ -81,9 +81,11 @@ def main_2(argv):
             # setup_clean_directory(img_path)
             for x in range(num_cells):
                 for y in range(num_cells):
+                    skip = True
                     for i in range(3):
                         c = p[0, y, x, i, 4]
-                        if c < 0.25: continue
+                        if c > 0.25: skip = False
+                    if skip: continue
                     cell_size = int(im_size / num_cells)
                     imd = im.copy()
                     cellxywh = [cell_size * x, cell_size * y, cell_size, cell_size]
