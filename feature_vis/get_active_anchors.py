@@ -17,6 +17,8 @@ def main(argv):
     inds = [1,3,5]
     labels = ['s','m','l']
     results = []
+    conf_bbox = []
+
     for i,l in zip(inds,labels):
         p = pred[i]
         num_cells = p.shape[1]
@@ -29,6 +31,9 @@ def main(argv):
 
                 # use most certain anchorbox
                 cell = p[0, y, x, :, :]
+                for i in range(3):
+                    c = cell[i, 4]
+                    if c > 0.25: conf_bbox.append(cell[i])
                 confs = cell[:, 4] # isolate c neuron
                 i_max_conf = np.argmax(confs)
                 winner = cell[i_max_conf]
@@ -43,6 +48,8 @@ def main(argv):
                 imd = draw_bbox(imd, [xywh], colors=[[1-conf, 0.0, conf]],
                                 labels=['%s(c:%.2f;a:%d)' % (class_names[cl_i], conf, i_max_conf)], font_scale=0.7)
     print(results)
+    print(conf_bbox)
+
     return results
 if __name__ == '__main__':
     try:
