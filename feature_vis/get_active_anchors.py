@@ -8,8 +8,6 @@ print(os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 from visualization.helper import get_model, get_class_names
 from visualization.image_helper import read_img_yolo, draw_bbox, save_image_wo_norm
 
-
-
 def main(argv):
     # set up paths
     #setup_clean_directory(out_path_bboxes)
