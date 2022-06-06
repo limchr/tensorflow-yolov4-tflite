@@ -1,4 +1,17 @@
 # Using Deep Dream:
+
+These scripts can be used to optimize images or gray starting points to certain classes or properties of YOLO. Included are three main scripts:
+## test_wrapper.py 
+Optimize the given input image for automatically detected anchorboxes and contents. You may use all other flags below in this script, however, certain combinations may lead to unexpected results. If you want to start from a gray image, use approach_lucid.py instead!
+```shell
+python feature_vis/test_wrapper.py
+```
+
+
+## approach_lucid.py
+Optimization based on given neurons, see notes below:
+The results of an ablation study can be found under output_images
+
 ```shell
 python feature_vis/approach_lucid.py \
 [-neurons / -n, default "output_neurons[5][0][6][6][0][5]", String of Neurons to Optimize, seperated by spaces, default is output_neurons[5][0][6][6][0][5]] \
@@ -17,6 +30,15 @@ python feature_vis/approach_lucid.py \
 [-repredouce, defaulte False, Flag that enables reproducability mode for random numbers (tf set seed with 2022)]
 
 ```
+
+## get_active_anchors.py
+Returns a list of active anchorboxes in the "output_neuorns" style explained below. To use:
+```shell
+python feature_vis/get_active_anchors.py \
+[-img_anchor / -i_a, String of path to a single input image to use via os.path, seperated by spaces, default is \"feature_vis\" \"data\", \"000000000431.jpg\"] \
+[-conf / Expects float [0-1], ignores boxes below this confidence, default 0.25]
+```
+
 
 ## Note on neurons
 
