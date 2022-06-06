@@ -10,6 +10,7 @@ python feature_vis/test_wrapper.py
 
 ## approach_lucid.py
 Optimization based on given neurons, see notes below:
+The results of an ablation study can be found under output_images
 
 ```shell
 python feature_vis/approach_lucid.py \
