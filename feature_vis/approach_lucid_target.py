@@ -200,8 +200,8 @@ def run_deep_dream_simple(img, deepdream, target, steps=100, step_size=0.01, sav
         loss, img = deepdream(img, run_steps, tf.constant(step_size), tv=tf.constant(tv), l1=tf.constant(l1),
                               l2=tf.constant(l2), pad=tf.constant(pad), c=tf.constant(c), target=target)
         if show_img: show(deprocess(img), step=step, anno=f"{na}, {param_anno}")
-        # save(img=deprocess(img), path=os.path.join(file_path, file_name + f"_{step}"), step=step,
-        #      anno=f"{na}, {param_anno}")
+        save(img=deprocess(img), path=os.path.join(file_path, file_name + f"_{step}"), step=step,
+             anno=f"{na}, {param_anno}")
         print("Step {}, loss {}".format(step, loss), end="\r")
     result = deprocess(img)
     if show_img: show(result, step=steps, anno=f"{na}, {param_anno}")
