@@ -166,7 +166,7 @@ class DeepDream(tf.Module):
 
 
 # Main Loop
-def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=50,file_path = os.path.join("feature_vis","output_images"), file_name = str(int(time.time())), tv=0, l1=0, l2=0, pad=0, c=0,
+def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=50,file_path = os.path.join("feature_vis","output_images"), file_name = str(int(time.time())), tv=0., l1=0., l2=0., pad=0., c=0,
                           na="",  show_img = True):
     # Convert from uint8 to the range expected by the model.
     img = tf.convert_to_tensor(img)
@@ -204,6 +204,57 @@ def run_deep_dream_simple(img, deepdream, steps=100, step_size=0.01, save_every=
     print("Saved and finished")
 
     return result
+
+
+def deep_dream_with_anchors(neurons = ["output_neurons[5][0][6][6][0][5]"], img = ["None"], steps = 1500, step_size = 0.05, save_every = 100,file_name = "deep_dream_test", file_path = "",tv = -0.000000025,l1 = 0.2, l2 = 2.0,pad = 1, c = 0, reproduce = False, model = None):
+    if reproduce:
+        tf.random.set_seed(2022)
+    if file_path is str:
+        file_path = os.path.join(os.path.curdir, "feature_vis", "output_images", file_path)
+    elif file_path is list:
+        file_path = os.path.join(os.path.curdir,"feature_vis","output_images", *file_path)
+
+    # Get the model
+    if model is None:
+        base_model = get_model()
+    else:
+        base_model = model
+
+    if file_path == []:
+        file_path = ""
+    img, _ = get_starting_point(img)
+    # Choose layers to maximize
+    # names = ['conv2d_4']
+    # layers = [base_model.get_layer(name).output for name in names]
+    # or choose a neuron
+    output_neurons = base_model.output
+    layers = []
+    for s in set(neurons):
+        layers.append(eval(s))
+    # Choose annotation for layer/neuron
+
+    # Create the feature extraction model
+    dream_model = tf.keras.Model(inputs=base_model.input, outputs=layers)
+
+    # Create the DeepDream
+    deepdream = DeepDream(dream_model)
+
+    dream_img = run_deep_dream_simple(
+        img=img,
+        deepdream=deepdream,
+        steps=steps,
+        step_size=step_size,
+        save_every=save_every,
+        # Regularizations
+        tv=tv,
+        l1=l1,
+        l2=l2,
+        pad=pad,
+        c=c,
+        # Annotations:
+        file_path=file_path,
+        file_name=file_name)
+
 def main(argv):
     if CLI.reproduce:
         tf.random.set_seed(2022)
