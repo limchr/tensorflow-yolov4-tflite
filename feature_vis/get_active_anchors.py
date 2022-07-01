@@ -12,7 +12,7 @@ from visualization.image_helper import read_img_yolo, draw_bbox, save_image_wo_n
 CLI = flags.FLAGS
 flags.DEFINE_spaceseplist(
     "img_anchor",  # name of the parameter
-    ["feature_vis", "data", "000000000431.jpg"], # Gray img
+    ["..","feature_vis", "data", "000000001006.jpg"], # Gray img
     "String of path to single input image to use via os.path, seperated by spaces, default is a gray image",
     short_name="i_a"
 )
@@ -34,6 +34,18 @@ def get_anchors_for_img(img, conf):
     anchors_high_conf = []
     bboxes = []
     to_out = []
+
+    # test
+    arr = pred[1][0]
+    maxind = arr[:, :, :, 4].argmax()
+
+    maxbb = arr.flatten()[maxind * 85:maxind * 85 + 85]
+
+    print(maxbb)
+
+    print(pred[1, 0, 7, 22, 2])
+
+
     for i, l in zip(inds, labels):
         p = pred[i]
         num_cells = p.shape[1]

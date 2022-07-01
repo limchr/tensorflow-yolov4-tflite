@@ -219,7 +219,7 @@ def main(argv):
     STEPS = CLI.steps
     STEP_SIZE = CLI.step_size
     SAVE_EVERY = CLI.save_every
-    FILE_PATH = os.path.join(os.path.curdir,"feature_vis","output_images", *CLI.file_path)
+    FILE_PATH = os.path.join(os.path.curdir,"output_images", *CLI.file_path)
     if not os.path.exists(FILE_PATH):
         os.mkdir(FILE_PATH)
     FILE_NAME = CLI.file_name
