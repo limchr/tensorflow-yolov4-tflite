@@ -33,10 +33,10 @@ def convert_to_float_images(imgs):
     return (imgs-min)/(max-min)
 
 
-def save_image(x,dir='.',filename='img'):
+def save_image(x,dir='.',filename='img.jpg'):
     x = normalize_img(x)
     img = Image.fromarray(x)
-    img.save(os.path.join(dir,filename+'.png'))
+    img.save(os.path.join(dir,filename))
 
 
 def save_image_wo_norm(img,dir='.',filename='img.jpg'):

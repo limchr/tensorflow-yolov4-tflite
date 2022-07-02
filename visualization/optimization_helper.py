@@ -13,11 +13,14 @@ from feature_vis.config import *
 import importlib.util
 #output_neurons[5][0][8][6][0][6]
 
+from visualization.image_helper import save_image
 
 import datetime
 
 
-tf.compat.v1.enable_eager_execution()
+from visualization.common import setup_clean_directory
+
+# tf.compat.v1.enable_eager_execution()
 
 
 
@@ -29,13 +32,18 @@ tf.compat.v1.enable_eager_execution()
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 train_log_dir = 'logs/gradient_tape/' + current_time + '/train'
 train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+img_log_dir = 'logs/imgs/' + current_time
+
+
+
 
 optimize_targets = None
 optimize_multiplier = None
 
 
 # Define loss function
-def calc_loss(img, model, start_image, tv, l1, l2, c, targets):
+# @tf.function
+def calc_loss(img, model, start_image, tv, l1, l2, c):
     global optimize_targets
     global optimize_multiplier
     # Pass forward the image through the model to retrieve the activations.
@@ -86,6 +94,7 @@ class DeepDream(tf.Module):
     def __init__(self, model):
         self.model = model
 
+    # @tf.function (
     input_signature=(tf.TensorSpec(shape=[None,None,3], dtype=tf.float32),
                      tf.TensorSpec(shape=[], dtype=tf.int32),
                      tf.TensorSpec(shape=[], dtype=tf.float32),
@@ -95,19 +104,19 @@ class DeepDream(tf.Module):
                      tf.TensorSpec(shape=[], dtype=tf.int32),
                      tf.TensorSpec(shape=[], dtype=tf.float32),
                      tf.TensorSpec(shape=None, dtype=tf.float32)),
-    def __call__(self, img, steps, step_size, tv, l1, l2, pad, c, targets):
+    # )
+
+    def __call__(self, img, steps, step_size, tv, l1, l2, pad, c, img_dir='.', img_every_steps=None):
         print("Tracing")
         loss = tf.constant(0.0,dtype=tf.float32)
         start_image = tf.identity(img)
-
 
         for n in tf.range(steps):
             with tf.GradientTape() as tape:
                 # This needs gradients relative to `img`
                 # `GradientTape` only watches `tf.Variable`s by default
                 tape.watch(img)
-                loss, l1l, l2l, tvl, hil = calc_loss(img, model=self.model, start_image=start_image, tv=tv, l1=l1, l2=l2, c=c, targets= targets)
-
+                loss, l1l, l2l, tvl, hil = calc_loss(img, model=self.model, start_image=start_image, tv=tv, l1=l1, l2=l2, c=c)
 
             gradients = tape.gradient(loss, img)
 
@@ -118,14 +127,16 @@ class DeepDream(tf.Module):
             # img = tf.clip_by_value(img, -1, 1)
 
             with train_summary_writer.as_default():
-                tf.summary.scalar('loss', tf.cast(loss, tf.float64), step=tf.cast(n, tf.int64))
-                tf.summary.scalar('l1l', tf.cast(l1l, tf.float64), step=tf.cast(n, tf.int64))
-                tf.summary.scalar('l2l', tf.cast(l2l, tf.float64), step=tf.cast(n, tf.int64))
-                tf.summary.scalar('tvl', tf.cast(tvl, tf.float64), step=tf.cast(n, tf.int64))
-                tf.summary.scalar('hil', tf.cast(hil, tf.float64), step=tf.cast(n, tf.int64))
-                if n % 10 == 0:
+                if n % 100 == 0:
+                    tf.summary.scalar('loss', tf.cast(loss, tf.float64), step=tf.cast(n, tf.int64))
+                    tf.summary.scalar('l1l', tf.cast(l1l, tf.float64), step=tf.cast(n, tf.int64))
+                    tf.summary.scalar('l2l', tf.cast(l2l, tf.float64), step=tf.cast(n, tf.int64))
+                    tf.summary.scalar('tvl', tf.cast(tvl, tf.float64), step=tf.cast(n, tf.int64))
+                    tf.summary.scalar('hil', tf.cast(hil, tf.float64), step=tf.cast(n, tf.int64))
+                if not img_every_steps is None and n % img_every_steps == 0:
                     tf.summary.image('dream', tf.expand_dims(tf.cast(img,tf.float64), axis=0), step=tf.cast(n, tf.int64))
-
+                    save_image(img.numpy(),img_dir,'%d.jpg'%(n,))
+        save_image(img.numpy(), img_dir, 'final.jpg')
         return loss, img
 
 
@@ -152,9 +163,12 @@ def deprocess_dream(img):
 
 
 
+def get_model_config(model, opt_ind, bbx, bby, anchorid, cls_ind):
+    global optimize_targets
+    global optimize_multiplier
 
-def main(argv):
-    model = get_model()
+    optimize_class = 5 + cls_ind
+
     model_output = model.output
 
 
@@ -165,17 +179,11 @@ def main(argv):
     path_large = model_output[5][0]
     path_large_target = np.zeros(path_large.shape,dtype=np.float)
 
-
-
-
     optimize_neurons = [
         path_small,
         path_middle,
         path_large
     ]
-
-    global optimize_targets
-    global optimize_multiplier
 
     optimize_targets = [
         path_small_target,
@@ -189,52 +197,89 @@ def main(argv):
         # tgc[tgc>0] = 1000000
         # tgc[tgc==0] = 1
         # tgc[:,:,:,:4] = 1.0/500 # normalization of xywh (max activation of appr. 450)
-        tgc[:,:,:,4] = 1
+        tgc[:,:,:,4] = 0
         optimize_multiplier.append(tgc)
-
-
-    bbx = 6
-    bby = 6
-    anchorid = 1
 
     for i in [bbx]:
         for j in [bby]:
-            optimize_targets[2][i][j][anchorid][0] = 100 # x
-            optimize_targets[2][i][j][anchorid][1] = 100 # y
-            optimize_targets[2][i][j][anchorid][2] = 100 # w
-            optimize_targets[2][i][j][anchorid][3] = 100 # h
-            optimize_targets[2][i][j][anchorid][4] = 1 # c
-            optimize_targets[2][i][j][anchorid][5] = 1 # p
-            optimize_multiplier[2][i][j][anchorid][:] = 1
-            optimize_multiplier[2][i][j][anchorid][:4] = 1./500
-            optimize_multiplier[2][i][j][anchorid][4] = 100
+            optimize_targets[opt_ind][i][j][anchorid][0] = 100 # x
+            optimize_targets[opt_ind][i][j][anchorid][1] = 100 # y
+            optimize_targets[opt_ind][i][j][anchorid][2] = 200 # w
+            optimize_targets[opt_ind][i][j][anchorid][3] = 200 # h
+            optimize_targets[opt_ind][i][j][anchorid][4] = 1 # c
+            optimize_targets[opt_ind][i][j][anchorid][optimize_class] = 1 # p
+            optimize_multiplier[opt_ind][i][j][anchorid][:] = 1
+            optimize_multiplier[opt_ind][i][j][anchorid][:4] = 1./500
+            optimize_multiplier[opt_ind][i][j][anchorid][4] = 10
+            optimize_multiplier[opt_ind][i][j][anchorid][optimize_class] = 10
+
+            # optimize_targets[opt_ind][i][j][anchorid][4] = 1 # c
+            # optimize_targets[opt_ind][i][j][anchorid][optimize_class] = 1 # p
+            # optimize_multiplier[opt_ind][i][j][anchorid][4] = 10
+            # optimize_multiplier[opt_ind][i][j][anchorid][optimize_class] = 10
 
 
-    img = get_starting_point('scalar', 0.5)
+    return model, optimize_neurons
 
 
-    # Create the feature extraction model
-    dream_model = tf.keras.Model(inputs=model.input, outputs=optimize_neurons)
 
-    # Create the DeepDream
-    deepdream = DeepDream(dream_model)
+def exp1(argv):
+    setup_clean_directory(os.path.join(img_log_dir, 'exp1'))
 
-    loss, img = deepdream(tf.convert_to_tensor(img, dtype=tf.float32),
-                          tf.constant(50000, dtype=tf.int32),
-                          tf.constant(0.05, dtype=tf.float32),
-                          tv=tf.constant(0.000000025, dtype=tf.float32),
-                          l1=tf.constant(0.2, dtype=tf.float32),
-                          l2=tf.constant(0.0002, dtype=tf.float32),
-                          pad=tf.constant(1, dtype=tf.int32),
-                          c=tf.constant(0, dtype=tf.float32),
-                          targets=tf.convert_to_tensor(img, dtype=tf.float32))
+    num_steps = 15000
+    lr = 0.05
+    tv = 0.0000000025
+    l1 = 0.6
+    l2 = 0.0006
+    pad = 0
+    c = 0
+    img_every_steps = 50
 
-    plt.imshow(img)
-    plt.show()
+    from visualization.helper import get_class_names
+    classes_dict = get_class_names()
+
+    model = get_model()
+
+
+    for cls in range(0, 80):
+
+        cls_name = classes_dict[cls]
+
+        model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=6, bby=6, anchorid=1, cls_ind=54)
+
+        img = get_starting_point('scalar', 0.5)
+
+
+        # Create the feature extraction model
+        dream_model = tf.keras.Model(inputs=model.input, outputs=optimize_neurons)
+
+        # Create the DeepDream
+        deepdream = DeepDream(dream_model)
+
+        cls_path = os.path.join(img_log_dir,'exp1',cls_name)
+
+        setup_clean_directory(cls_path)
+
+
+
+        loss, img = deepdream(tf.convert_to_tensor(img, dtype=tf.float32),
+                              tf.constant(num_steps, dtype=tf.int32),
+                              tf.constant(lr, dtype=tf.float32),
+                              tv=tf.constant(tv, dtype=tf.float32),
+                              l1=tf.constant(l1, dtype=tf.float32),
+                              l2=tf.constant(l2, dtype=tf.float32),
+                              pad=tf.constant(pad, dtype=tf.int32),
+                              c=tf.constant(c, dtype=tf.float32),
+                              img_dir=cls_path,
+                              img_every_steps=img_every_steps
+                              )
+
+
 
 if __name__ == '__main__':
 
     try:
-        app.run(main)
+        app.run(exp1)
     except SystemExit:
+        print("ERROR IN MATIN")
         pass
