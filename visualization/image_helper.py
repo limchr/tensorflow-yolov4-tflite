@@ -39,7 +39,7 @@ def save_image(x,dir='.',filename='img.jpg'):
     img.save(os.path.join(dir,filename))
 
 
-def save_image_wo_norm(img,dir='.',filename='img.jpg'):
+def save_image_wo_norm(img,dir='.',filename='img.jpg', bias=0, stretch=1):
     # ensure that img is a numpy array
     img = np.array(img)
 
@@ -50,12 +50,26 @@ def save_image_wo_norm(img,dir='.',filename='img.jpg'):
     #         cimg[:,:,i] = img
     #     img = cimg
 
-    img = np.array(img*255,dtype=np.uint8)
+    img_int = np.array(np.clip((img)*255,0,255),dtype=np.uint8)
 
+    img_pil = Image.fromarray(img_int)
+    img_pil.save(os.path.join(dir,filename))
 
-    img = Image.fromarray(img)
-    img.save(os.path.join(dir,filename))
+def save_image_static_norm(img, dir='.', filename='img.jpg', bias=0, stretch=1):
+    # ensure that img is a numpy array
+    img = np.array(img)
 
+    # convert to color image
+    # if len(img.shape) == 2:
+    #     cimg = np.ones((img.shape[0],img.shape[1],3))
+    #     for i in range(3):
+    #         cimg[:,:,i] = img
+    #     img = cimg
+
+    img_int = np.array(np.clip((img*stretch * 127)+(bias*255), 0, 255), dtype=np.uint8)
+
+    img_pil = Image.fromarray(img_int)
+    img_pil.save(os.path.join(dir, filename))
 
 
 def normalize_img(img, int_img=True, col_img=True):

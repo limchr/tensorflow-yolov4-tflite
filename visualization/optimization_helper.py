@@ -13,7 +13,7 @@ from feature_vis.config import *
 import importlib.util
 #output_neurons[5][0][8][6][0][6]
 
-from visualization.image_helper import save_image
+from visualization.image_helper import save_image, save_image_wo_norm, save_image_static_norm
 
 import datetime
 
@@ -77,14 +77,17 @@ def calc_loss(img, model, start_image, tv, l1, l2, c):
 
 
     # Regularization for color hist
-    hist = color_histogram(img, 32)
-    prev_hist = color_histogram(start_image, 32)
-    hist_diff = tf.reduce_sum(tf.math.abs(hist - prev_hist))
+    if c != 0:
+        hist = color_histogram(img, 32)
+        prev_hist = color_histogram(start_image, 32)
+        hist_diff = tf.reduce_sum(tf.math.abs(hist - prev_hist))
+        hil = c * hist_diff
+    else:
+        hil = 0
 
     l1l = l1 * loss_l1
     l2l = l2 * loss_l2
     tvl = tv * tf.image.total_variation(img)
-    hil = c * hist_diff
 
     return l1l + l2l + tvl + hil, l1l, l2l, tvl, hil
 
@@ -106,7 +109,7 @@ class DeepDream(tf.Module):
                      tf.TensorSpec(shape=None, dtype=tf.float32)),
     # )
 
-    def __call__(self, img, steps, step_size, tv, l1, l2, pad, c, img_dir='.', img_every_steps=None):
+    def __call__(self, img, steps, step_size, tv, l1, l2, pad, c, img_dir='.', img_every_steps=None, img_name='final.jpg'):
         print("Tracing")
         loss = tf.constant(0.0,dtype=tf.float32)
         start_image = tf.identity(img)
@@ -123,20 +126,21 @@ class DeepDream(tf.Module):
             gradients /= tf.math.reduce_std(gradients) + 1e-8
 
             img = img - gradients * step_size
-            img = crop_and_pad(img, pad)
+            # img = crop_and_pad(img, pad)
             # img = tf.clip_by_value(img, -1, 1)
 
-            with train_summary_writer.as_default():
-                if n % 100 == 0:
+            if n % 100 == 0:
+                with train_summary_writer.as_default():
                     tf.summary.scalar('loss', tf.cast(loss, tf.float64), step=tf.cast(n, tf.int64))
                     tf.summary.scalar('l1l', tf.cast(l1l, tf.float64), step=tf.cast(n, tf.int64))
                     tf.summary.scalar('l2l', tf.cast(l2l, tf.float64), step=tf.cast(n, tf.int64))
                     tf.summary.scalar('tvl', tf.cast(tvl, tf.float64), step=tf.cast(n, tf.int64))
                     tf.summary.scalar('hil', tf.cast(hil, tf.float64), step=tf.cast(n, tf.int64))
-                if not img_every_steps is None and n % img_every_steps == 0:
+            if not img_every_steps is None and n % img_every_steps == 0:
+                with train_summary_writer.as_default():
                     tf.summary.image('dream', tf.expand_dims(tf.cast(img,tf.float64), axis=0), step=tf.cast(n, tf.int64))
-                    save_image(img.numpy(),img_dir,'%d.jpg'%(n,))
-        save_image(img.numpy(), img_dir, 'final.jpg')
+                    save_image_static_norm(img.numpy(),img_dir,'%d.jpg'%(n,),bias=0.5,stretch=1)
+        save_image_static_norm(img.numpy(),img_dir, img_name,bias=0.5,stretch=1)
         return loss, img
 
 
@@ -147,7 +151,8 @@ def get_starting_point(type,val=None):
         val = 0.5 if val is None else val
         img = np.full((416, 416, 3), val, dtype="float32")
     elif type == "random":
-        img = np.random.rand(416, 416, 3).astype("float32")
+        mult = 1 if val is None else val
+        img = np.random.rand(416, 416, 3).astype("float32") * mult
     elif type == "image":
         img = read_img_yolo(val).astype("float32")
     else:
@@ -163,7 +168,7 @@ def deprocess_dream(img):
 
 
 
-def get_model_config(model, opt_ind, bbx, bby, anchorid, cls_ind):
+def get_model_config(model, opt_ind, bbx, bby, anchorid, cls_ind, w, h):
     global optimize_targets
     global optimize_multiplier
 
@@ -173,11 +178,11 @@ def get_model_config(model, opt_ind, bbx, bby, anchorid, cls_ind):
 
 
     path_small = model_output[1][0]
-    path_small_target = np.zeros(path_small.shape,dtype=np.float)
+    path_small_target = np.zeros(path_small.shape,dtype=float)
     path_middle = model_output[3][0]
-    path_middle_target = np.zeros(path_middle.shape,dtype=np.float)
+    path_middle_target = np.zeros(path_middle.shape,dtype=float)
     path_large = model_output[5][0]
-    path_large_target = np.zeros(path_large.shape,dtype=np.float)
+    path_large_target = np.zeros(path_large.shape,dtype=float)
 
     optimize_neurons = [
         path_small,
@@ -204,12 +209,14 @@ def get_model_config(model, opt_ind, bbx, bby, anchorid, cls_ind):
         for j in [bby]:
             optimize_targets[opt_ind][i][j][anchorid][0] = 100 # x
             optimize_targets[opt_ind][i][j][anchorid][1] = 100 # y
-            optimize_targets[opt_ind][i][j][anchorid][2] = 200 # w
-            optimize_targets[opt_ind][i][j][anchorid][3] = 200 # h
+            optimize_targets[opt_ind][i][j][anchorid][2] = w # w
+            optimize_targets[opt_ind][i][j][anchorid][3] = h # h
             optimize_targets[opt_ind][i][j][anchorid][4] = 1 # c
             optimize_targets[opt_ind][i][j][anchorid][optimize_class] = 1 # p
             optimize_multiplier[opt_ind][i][j][anchorid][:] = 1
             optimize_multiplier[opt_ind][i][j][anchorid][:4] = 1./500
+            optimize_multiplier[opt_ind][i][j][anchorid][0] = 0
+            optimize_multiplier[opt_ind][i][j][anchorid][1] = 0
             optimize_multiplier[opt_ind][i][j][anchorid][4] = 10
             optimize_multiplier[opt_ind][i][j][anchorid][optimize_class] = 10
 
@@ -228,12 +235,12 @@ def exp1(argv):
 
     num_steps = 15000
     lr = 0.05
-    tv = 0.0000000025
+    tv = 0.25e-8
     l1 = 0.6
     l2 = 0.0006
     pad = 0
     c = 0
-    img_every_steps = 50
+    img_every_steps = 250
 
     from visualization.helper import get_class_names
     classes_dict = get_class_names()
@@ -242,10 +249,9 @@ def exp1(argv):
 
 
     for cls in range(0, 80):
-
         cls_name = classes_dict[cls]
 
-        model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=6, bby=6, anchorid=1, cls_ind=54)
+        model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=6, bby=6, anchorid=1, cls_ind=cls, w=200, h=200)
 
         img = get_starting_point('scalar', 0.5)
 
@@ -276,10 +282,126 @@ def exp1(argv):
 
 
 
+
+def exp2(argv):
+    num_steps = 50
+    lr = 0.2
+    tv = 0.25e-9
+    l1 = 0.6
+    l2 = 0.0006
+    pad = 0
+    c = 0
+    img_every_steps = None
+
+    from visualization.helper import get_class_names
+    classes_dict = get_class_names()
+
+    opt_cls = 'bicycle'
+
+
+    out_path = os.path.join(img_log_dir, 'exp2',opt_cls)
+    setup_clean_directory(out_path)
+
+
+
+    cls_i = list(classes_dict.keys())[list(classes_dict.values()).index(opt_cls)]
+
+    model = get_model()
+
+    for i in range(0,13):
+        for j in range(0,13):
+
+
+            model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=i, bby=j, anchorid=1, cls_ind=cls_i, w=200, h=200)
+
+            img = get_starting_point('scalar', 0.5)
+
+
+            # Create the feature extraction model
+            dream_model = tf.keras.Model(inputs=model.input, outputs=optimize_neurons)
+
+            # Create the DeepDream
+            deepdream = DeepDream(dream_model)
+
+
+            loss, img = deepdream(tf.convert_to_tensor(img, dtype=tf.float32),
+                                  tf.constant(num_steps, dtype=tf.int32),
+                                  tf.constant(lr, dtype=tf.float32),
+                                  tv=tf.constant(tv, dtype=tf.float32),
+                                  l1=tf.constant(l1, dtype=tf.float32),
+                                  l2=tf.constant(l2, dtype=tf.float32),
+                                  pad=tf.constant(pad, dtype=tf.int32),
+                                  c=tf.constant(c, dtype=tf.float32),
+                                  img_dir=out_path,
+                                  img_every_steps=img_every_steps,
+                                  img_name='%02d_%02d.jpg'%(i,j)
+                                  )
+
+
+def exp3(argv):
+
+    num_height_steps = 10
+
+    num_steps = 15000
+    lr = 0.2
+    tv = 0.25e-9
+    l1 = 0.6
+    l2 = 0.0006
+    pad = 0
+    c = 0
+    img_every_steps = None
+
+    from visualization.helper import get_class_names
+    classes_dict = get_class_names()
+
+    opt_cls = 'person'
+
+
+    out_path = os.path.join(img_log_dir, 'exp3',opt_cls)
+    setup_clean_directory(out_path)
+
+
+
+    cls_i = list(classes_dict.keys())[list(classes_dict.values()).index(opt_cls)]
+
+    model = get_model()
+
+    for i in range(0,num_height_steps):
+        model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=6, bby=6, anchorid=1, cls_ind=cls_i, w=100, h=(416.0/num_height_steps)*(i+1))
+
+        img = get_starting_point('scalar', 0.5)
+
+
+        # Create the feature extraction model
+        dream_model = tf.keras.Model(inputs=model.input, outputs=optimize_neurons)
+
+        # Create the DeepDream
+        deepdream = DeepDream(dream_model)
+
+
+        loss, img = deepdream(tf.convert_to_tensor(img, dtype=tf.float32),
+                              tf.constant(num_steps, dtype=tf.int32),
+                              tf.constant(lr, dtype=tf.float32),
+                              tv=tf.constant(tv, dtype=tf.float32),
+                              l1=tf.constant(l1, dtype=tf.float32),
+                              l2=tf.constant(l2, dtype=tf.float32),
+                              pad=tf.constant(pad, dtype=tf.int32),
+                              c=tf.constant(c, dtype=tf.float32),
+                              img_dir=out_path,
+                              img_every_steps=img_every_steps,
+                              img_name='%02d.jpg'%(i,)
+                              )
+
+
+
+
+
+
+
 if __name__ == '__main__':
 
     try:
-        app.run(exp1)
-    except SystemExit:
-        print("ERROR IN MATIN")
+        app.run(exp3)
+    except SystemExit as ex:
+        print("ERROR IN MAIN: "+ex.__str__())
         pass

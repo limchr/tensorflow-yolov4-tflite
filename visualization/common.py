@@ -22,3 +22,6 @@ def setup_clean_directory(dir):
 
 def get_files_of_type(path, type='jpg'):
     return np.array([x for x in sorted(os.listdir(path)) if x.lower().endswith(type.lower())])
+
+def get_subdirectories(path):
+    return os.walk(path).__next__()[1]
