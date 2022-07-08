@@ -207,23 +207,21 @@ def get_model_config(model, opt_ind, bbx, bby, anchorid, cls_ind, w, h):
 
     for i in [bbx]:
         for j in [bby]:
+            optimize_targets[opt_ind][i][j][anchorid][:] = 0 # x
             optimize_targets[opt_ind][i][j][anchorid][0] = 100 # x
             optimize_targets[opt_ind][i][j][anchorid][1] = 100 # y
             optimize_targets[opt_ind][i][j][anchorid][2] = w # w
             optimize_targets[opt_ind][i][j][anchorid][3] = h # h
             optimize_targets[opt_ind][i][j][anchorid][4] = 1 # c
             optimize_targets[opt_ind][i][j][anchorid][optimize_class] = 1 # p
+
             optimize_multiplier[opt_ind][i][j][anchorid][:] = 1
-            optimize_multiplier[opt_ind][i][j][anchorid][:4] = 1./500
             optimize_multiplier[opt_ind][i][j][anchorid][0] = 0
             optimize_multiplier[opt_ind][i][j][anchorid][1] = 0
+            optimize_multiplier[opt_ind][i][j][anchorid][2] = 0
+            optimize_multiplier[opt_ind][i][j][anchorid][3] = 0
             optimize_multiplier[opt_ind][i][j][anchorid][4] = 10
             optimize_multiplier[opt_ind][i][j][anchorid][optimize_class] = 10
-
-            # optimize_targets[opt_ind][i][j][anchorid][4] = 1 # c
-            # optimize_targets[opt_ind][i][j][anchorid][optimize_class] = 1 # p
-            # optimize_multiplier[opt_ind][i][j][anchorid][4] = 10
-            # optimize_multiplier[opt_ind][i][j][anchorid][optimize_class] = 10
 
 
     return model, optimize_neurons
@@ -284,19 +282,19 @@ def exp1(argv):
 
 
 def exp2(argv):
-    num_steps = 50
-    lr = 0.2
+    num_steps = 15000
+    lr = 0.05
     tv = 0.25e-9
     l1 = 0.6
     l2 = 0.0006
     pad = 0
     c = 0
-    img_every_steps = None
+    img_every_steps = 250
 
     from visualization.helper import get_class_names
     classes_dict = get_class_names()
 
-    opt_cls = 'bicycle'
+    opt_cls = 'zebra'
 
 
     out_path = os.path.join(img_log_dir, 'exp2',opt_cls)
@@ -401,7 +399,7 @@ def exp3(argv):
 if __name__ == '__main__':
 
     try:
-        app.run(exp3)
+        app.run(exp2)
     except SystemExit as ex:
         print("ERROR IN MAIN: "+ex.__str__())
         pass
