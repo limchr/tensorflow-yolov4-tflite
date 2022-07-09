@@ -1,11 +1,33 @@
 import os
 import sys
+
+import tensorflow as tf
+
+
+
+gpus = tf.config.list_physical_devices('GPU')
+for g in gpus:
+  # Restrict TensorFlow to only allocate 10GB of memory on the first GPU
+  try:
+    tf.config.set_logical_device_configuration(
+        g,
+        [tf.config.LogicalDeviceConfiguration(memory_limit=10240)])
+    logical_gpus = tf.config.list_logical_devices('GPU')
+    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+  except RuntimeError as e:
+    # Virtual devices must be set before GPUs have been initialized
+    print(e)
+
+
+
+
+
+
 sys.path.append(os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')))
 print(os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')))
 from visualization.helper import get_model
 from absl import app, flags
 from feature_vis.helper import *
-import tensorflow as tf
 import numpy as np
 import time
 import cv2
@@ -19,11 +41,6 @@ import datetime
 
 
 from visualization.common import setup_clean_directory
-
-# tf.compat.v1.enable_eager_execution()
-
-
-
 
 
 
