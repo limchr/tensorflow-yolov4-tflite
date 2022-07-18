@@ -185,7 +185,7 @@ def deprocess_dream(img):
 
 
 
-def get_model_config(model, opt_ind, bbx, bby, anchorid, cls_ind, w, h):
+def get_model_config(model, opt_ind, bbx, bby, anchorid, cls_ind, target_dxywhcp, multiplier_dxywhcp, default_c):
     global optimize_targets
     global optimize_multiplier
 
@@ -219,43 +219,44 @@ def get_model_config(model, opt_ind, bbx, bby, anchorid, cls_ind, w, h):
         # tgc[tgc>0] = 1000000
         # tgc[tgc==0] = 1
         # tgc[:,:,:,:4] = 1.0/500 # normalization of xywh (max activation of appr. 450)
-        tgc[:,:,:,4] = 0
+        tgc[:,:,:,4] = default_c
         optimize_multiplier.append(tgc)
+
 
     for i in [bbx]:
         for j in [bby]:
-            optimize_targets[opt_ind][i][j][anchorid][:] = 0 # x
-            optimize_targets[opt_ind][i][j][anchorid][0] = 100 # x
-            optimize_targets[opt_ind][i][j][anchorid][1] = 100 # y
-            optimize_targets[opt_ind][i][j][anchorid][2] = w # w
-            optimize_targets[opt_ind][i][j][anchorid][3] = h # h
-            optimize_targets[opt_ind][i][j][anchorid][4] = 1 # c
-            optimize_targets[opt_ind][i][j][anchorid][optimize_class] = 1 # p
+            optimize_targets[opt_ind][i][j][anchorid][:] = target_dxywhcp[0] # default
+            optimize_targets[opt_ind][i][j][anchorid][0] = target_dxywhcp[1] # x
+            optimize_targets[opt_ind][i][j][anchorid][1] = target_dxywhcp[2] # y
+            optimize_targets[opt_ind][i][j][anchorid][2] = target_dxywhcp[3] # w
+            optimize_targets[opt_ind][i][j][anchorid][3] = target_dxywhcp[4] # h
+            optimize_targets[opt_ind][i][j][anchorid][4] = target_dxywhcp[5] # c
+            optimize_targets[opt_ind][i][j][anchorid][optimize_class] = target_dxywhcp[6] # p
 
-            optimize_multiplier[opt_ind][i][j][anchorid][:] = 1
-            optimize_multiplier[opt_ind][i][j][anchorid][0] = 0
-            optimize_multiplier[opt_ind][i][j][anchorid][1] = 0
-            optimize_multiplier[opt_ind][i][j][anchorid][2] = 0
-            optimize_multiplier[opt_ind][i][j][anchorid][3] = 0
-            optimize_multiplier[opt_ind][i][j][anchorid][4] = 10
-            optimize_multiplier[opt_ind][i][j][anchorid][optimize_class] = 10
+            optimize_multiplier[opt_ind][i][j][anchorid][:] = multiplier_dxywhcp[0]
+            optimize_multiplier[opt_ind][i][j][anchorid][0] = multiplier_dxywhcp[1]
+            optimize_multiplier[opt_ind][i][j][anchorid][1] = multiplier_dxywhcp[2]
+            optimize_multiplier[opt_ind][i][j][anchorid][2] = multiplier_dxywhcp[3]
+            optimize_multiplier[opt_ind][i][j][anchorid][3] = multiplier_dxywhcp[4]
+            optimize_multiplier[opt_ind][i][j][anchorid][4] = multiplier_dxywhcp[5]
+            optimize_multiplier[opt_ind][i][j][anchorid][optimize_class] = multiplier_dxywhcp[6]
 
 
     return model, optimize_neurons
 
 
-
+#video of guessing game
 def exp1(argv):
     setup_clean_directory(os.path.join(img_log_dir, 'exp1'))
 
     num_steps = 15000
     lr = 0.05
-    tv = 0.25e-8
-    l1 = 0.6
-    l2 = 0.0006
+    tv = 0.25e-9
+    l1 = 0.8
+    l2 = 0.000
     pad = 0
     c = 0
-    img_every_steps = 250
+    img_every_steps = 100
 
     from visualization.helper import get_class_names
     classes_dict = get_class_names()
@@ -266,7 +267,11 @@ def exp1(argv):
     for cls in range(0, 80):
         cls_name = classes_dict[cls]
 
-        model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=6, bby=6, anchorid=1, cls_ind=cls, w=200, h=200)
+        target_dxywhcp = [0, 208, 208, 192, 243, 1, 1]
+        multiplier_dxywhcp = [0.5, 0, 0, 1, 0, 10, 10]
+        default_c = 0.3
+
+        model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=6, bby=6, anchorid=1, cls_ind=cls, target_dxywhcp=target_dxywhcp, multiplier_dxywhcp=multiplier_dxywhcp, default_c=default_c)
 
         img = get_starting_point('scalar', 0.5)
 
@@ -297,16 +302,16 @@ def exp1(argv):
 
 
 
-
+# moving zebra
 def exp2(argv):
     num_steps = 15000
     lr = 0.05
     tv = 0.25e-9
-    l1 = 0.6
-    l2 = 0.0006
+    l1 = 0.8
+    l2 = 0.00
     pad = 0
     c = 0
-    img_every_steps = 250
+    img_every_steps = None
 
     from visualization.helper import get_class_names
     classes_dict = get_class_names()
@@ -325,9 +330,11 @@ def exp2(argv):
 
     for i in range(0,13):
         for j in range(0,13):
+            target_dxywhcp = [0, 208, 208, 192, 243, 1, 1]
+            multiplier_dxywhcp = [0.5, 0, 0, 1, 0, 10, 10]
+            default_c = 0.3
 
-
-            model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=i, bby=j, anchorid=1, cls_ind=cls_i, w=200, h=200)
+            model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=i, bby=j, anchorid=1, cls_ind=cls_i, target_dxywhcp=target_dxywhcp, multiplier_dxywhcp=multiplier_dxywhcp, default_c=default_c)
 
             img = get_starting_point('scalar', 0.5)
 
@@ -352,7 +359,7 @@ def exp2(argv):
                                   img_name='%02d_%02d.jpg'%(i,j)
                                   )
 
-
+# height slider
 def exp3(argv):
 
     num_height_steps = 10
@@ -360,8 +367,8 @@ def exp3(argv):
     num_steps = 15000
     lr = 0.2
     tv = 0.25e-9
-    l1 = 0.6
-    l2 = 0.0006
+    l1 = 0.8
+    l2 = 0.00
     pad = 0
     c = 0
     img_every_steps = None
@@ -382,7 +389,13 @@ def exp3(argv):
     model = get_model()
 
     for i in range(0,num_height_steps):
-        model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=6, bby=6, anchorid=1, cls_ind=cls_i, w=100, h=(416.0/num_height_steps)*(i+1))
+
+        target_dxywhcp = [0, 208, 208, 192, (416.0 / num_height_steps) * (i + 1), 1, 1]
+        multiplier_dxywhcp = [0.5, 0, 0, 0, 1, 10, 10]
+        default_c = 0.3
+
+
+        model, optimize_neurons = get_model_config(model, opt_ind=2, bbx=6, bby=6, anchorid=1, cls_ind=cls_i, target_dxywhcp=target_dxywhcp, multiplier_dxywhcp=multiplier_dxywhcp, default_c=default_c)
 
         img = get_starting_point('scalar', 0.5)
 
@@ -416,7 +429,7 @@ def exp3(argv):
 if __name__ == '__main__':
 
     try:
-        app.run(exp2)
+        app.run(exp1)
     except SystemExit as ex:
         print("ERROR IN MAIN: "+ex.__str__())
         pass
